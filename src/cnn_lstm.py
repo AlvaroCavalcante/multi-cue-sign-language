@@ -5,6 +5,12 @@ from tensorflow.keras.layers import Concatenate, Conv2D, MaxPooling2D, GlobalAve
 
 from read_dataset import load_data_tfrecord
 
+physical_devices = tf.config.list_physical_devices('GPU')
+try:
+    tf.config.experimental.set_memory_growth(physical_devices[0], True)
+except:
+    print('GPU not found')
+
 MAX_SEQ_LENGTH = 16
 NUM_FEATURES = 3000
 NUMBER_OF_CLASSES = 3
@@ -31,7 +37,7 @@ def get_sequence_model():
         loss="sparse_categorical_crossentropy", optimizer=tf.keras.optimizers.Adam(learning_rate=0.001), metrics=["accuracy"]
     )
 
-    tf.keras.utils.plot_model(rnn_model, "model.png", show_shapes=True)
+    # tf.keras.utils.plot_model(rnn_model, "model.png", show_shapes=True)
     return rnn_model
 
 
@@ -58,7 +64,7 @@ def get_cnn_model():
 
     model = Model(inputs=[hand1_input, hand2_input, face_input], outputs=final_output)
 
-    tf.keras.utils.plot_model(model, "model.png", show_shapes=True)
+    # tf.keras.utils.plot_model(model, "model.png", show_shapes=True)
 
     return model
 
@@ -73,7 +79,7 @@ def count_data_items(tfrecord):
 train_files = ['/home/alvaro/Documentos/video2tfrecord/example/train/batch_1_of_2.tfrecords',
 '/home/alvaro/Documentos/video2tfrecord/example/train/batch_2_of_2.tfrecords']
 
-batch_size = 10
+batch_size = 6
 
 dataset = load_data_tfrecord(train_files, batch_size)
 
@@ -82,12 +88,10 @@ num_training_imgs = count_data_items(train_files)
 train_steps = num_training_imgs // batch_size
 
 def train_gen():
-    rep_dict = {104: 2, 1: 1, 118: 2 }
+    rep_dict = {104: 0, 1: 1, 118: 2 }
     for (hand_seq, face_seq, triangle_data, centroids, video_imgs, label, video_name_list, triangle_stream) in dataset:
-        yield [hand_seq[:, 0], hand_seq[:, 1], face_seq], [rep_dict[x.numpy()] for x in label]
+        yield [hand_seq[:, 0], hand_seq[:, 1], face_seq], tf.constant([rep_dict[x.numpy()] for x in label], dtype=tf.int8)
 
 get_sequence_model().fit(train_gen(),
                     steps_per_epoch=train_steps,
-                    epochs=10,
-                    validation_data=train_gen(),
-                    validation_steps=train_steps)
+                    epochs=70)
