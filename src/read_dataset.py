@@ -5,7 +5,8 @@ def get_image(img, width, height):
     image = tf.image.resize(image, [width, height])
     # image = tf.reshape(image, tf.stack([height, width, 3]))
     # image = tf.reshape(image, [1, height, width, 3])
-    image = tf.cast(image, dtype='uint8')
+    # image = tf.cast(image, dtype='uint8')
+    image = tf.image.per_image_standardization(image)
     return image
 
 def read_tfrecord(example_proto):
