@@ -72,16 +72,16 @@ def load_dataset(tf_record_path):
     parsed_dataset = raw_dataset.map(read_tfrecord)
     return parsed_dataset
 
-def prepare_for_training(ds, shuffle_buffer_size=25):
+def prepare_for_training(ds, batch_size, shuffle_buffer_size=25):
     # ds.cache() # I can remove this to don't use cache or use cocodata.tfcache
 
     ds = ds.repeat().shuffle(buffer_size=shuffle_buffer_size).batch(
-        10).prefetch(tf.data.experimental.AUTOTUNE)
+        batch_size).prefetch(tf.data.experimental.AUTOTUNE)
 
     return ds
 
-def load_data_tfrecord(tfrecord_path):
+def load_data_tfrecord(tfrecord_path, batch_size):
     dataset = load_dataset(tfrecord_path)
 
-    dataset = prepare_for_training(dataset)
+    dataset = prepare_for_training(dataset, batch_size)
     return dataset

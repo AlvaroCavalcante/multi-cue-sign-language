@@ -75,7 +75,7 @@ train_files = ['/home/alvaro/Documentos/video2tfrecord/example/train/batch_1_of_
 
 batch_size = 10
 
-dataset = load_data_tfrecord(train_files)
+dataset = load_data_tfrecord(train_files, batch_size)
 
 num_training_imgs = count_data_items(train_files)
 
@@ -88,4 +88,6 @@ def train_gen():
 
 get_sequence_model().fit(train_gen(),
                     steps_per_epoch=train_steps,
-                    epochs=10)
+                    epochs=10,
+                    validation_data=train_gen(),
+                    validation_steps=train_steps)
