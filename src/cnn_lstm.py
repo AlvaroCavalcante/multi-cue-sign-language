@@ -12,7 +12,7 @@ FACE_WIDTH, FACE_HEIGHT = 80, 80
 def get_sequence_model():
     cnn_model = get_cnn_model()
 
-    frame_features_input = [keras.Input((None, HAND_WIDTH, HAND_HEIGHT, 3), name="input"+str(c)) for c in range(3)]
+    frame_features_input = [keras.Input((16, HAND_WIDTH, HAND_HEIGHT, 3), name="input"+str(c)) for c in range(3)]
 
     # Refer to the following tutorial to understand the significance of using `mask`:
     # https://keras.io/api/layers/recurrent_layers/gru/
