@@ -3,6 +3,8 @@ from tensorflow import keras
 from tensorflow.keras.models import Sequential, Model
 from tensorflow.keras.layers import Concatenate, Conv2D, MaxPooling2D, GlobalAveragePooling2D, TimeDistributed
 
+from read_dataset import load_data_tfrecord
+
 MAX_SEQ_LENGTH = 16
 NUM_FEATURES = 3000
 NUMBER_OF_CLASSES = 3
@@ -26,7 +28,7 @@ def get_sequence_model():
     rnn_model = keras.Model(frame_features_input, output)
 
     rnn_model.compile(
-        loss="sparse_categorical_crossentropy", optimizer="adam", metrics=["accuracy"]
+        loss="sparse_categorical_crossentropy", optimizer=tf.keras.optimizers.Adam(learning_rate=0.001), metrics=["accuracy"]
     )
 
     tf.keras.utils.plot_model(rnn_model, "model.png", show_shapes=True)
@@ -60,4 +62,30 @@ def get_cnn_model():
 
     return model
 
-get_sequence_model()
+def count_data_items(tfrecord):
+    count = 0
+    for fn in tfrecord:
+      for _ in tf.compat.v1.python_io.tf_record_iterator(fn):
+        count += 1
+
+    return count
+
+train_files = ['/home/alvaro/Documentos/video2tfrecord/example/train/batch_1_of_2.tfrecords',
+'/home/alvaro/Documentos/video2tfrecord/example/train/batch_2_of_2.tfrecords']
+
+batch_size = 10
+
+dataset = load_data_tfrecord(train_files)
+
+num_training_imgs = count_data_items(train_files)
+
+train_steps = num_training_imgs // batch_size
+
+def train_gen():
+    rep_dict = {104: 2, 1: 1, 118: 2 }
+    for (hand_seq, face_seq, triangle_data, centroids, video_imgs, label, video_name_list, triangle_stream) in dataset:
+        yield [hand_seq[:, 0], hand_seq[:, 1], face_seq], [rep_dict[x.numpy()] for x in label]
+
+get_sequence_model().fit(train_gen(),
+                    steps_per_epoch=train_steps,
+                    epochs=10)
