@@ -1,7 +1,8 @@
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.models import Sequential, Model
-from tensorflow.keras.layers import Concatenate, Conv2D, MaxPooling2D, GlobalAveragePooling2D, TimeDistributed
+from tensorflow.keras.layers import Concatenate, Conv2D, MaxPooling2D, GlobalAveragePooling2D, TimeDistributed, Flatten
+from tensorflow.keras.callbacks import ModelCheckpoint
 
 from read_dataset import load_data_tfrecord
 
@@ -21,6 +22,7 @@ def get_sequence_model():
     cnn_model = get_cnn_model()
 
     frame_features_input = [keras.Input((16, HAND_WIDTH, HAND_HEIGHT, 3), name="input"+str(c)) for c in range(3)]
+    frame_features_input.append(keras.Input((16, 13), name='triangle_data'))
 
     # Refer to the following tutorial to understand the significance of using `mask`:
     # https://keras.io/api/layers/recurrent_layers/gru/
@@ -37,7 +39,7 @@ def get_sequence_model():
         loss="sparse_categorical_crossentropy", optimizer=tf.keras.optimizers.Adam(learning_rate=0.001), metrics=["accuracy"]
     )
 
-    # tf.keras.utils.plot_model(rnn_model, "model.png", show_shapes=True)
+    tf.keras.utils.plot_model(rnn_model, "model.png", show_shapes=True)
     return rnn_model
 
 
@@ -55,16 +57,17 @@ def get_cnn_model():
     hand1_input = tf.keras.layers.Input(shape=(HAND_WIDTH, HAND_HEIGHT, 3), name='hand1_input')
     hand2_input = tf.keras.layers.Input(shape=(HAND_WIDTH, HAND_HEIGHT, 3), name='hand2_input')
     face_input = tf.keras.layers.Input(shape=(FACE_WIDTH, FACE_HEIGHT, 3), name='face_input')
+    triangle_input = tf.keras.layers.Input(shape=(13), name='triangle_input')
 
     hand1_seq = get_base_sequence(hand1_input)
     hand2_seq = get_base_sequence(hand2_input)
     face_seq = get_base_sequence(face_input)
 
-    final_output = Concatenate()([hand1_seq, hand2_seq, face_seq])
+    concat_layers = Concatenate()([hand1_seq, hand2_seq, face_seq])
+    final_output = Concatenate()([concat_layers, triangle_input])
 
-    model = Model(inputs=[hand1_input, hand2_input, face_input], outputs=final_output)
-
-    # tf.keras.utils.plot_model(model, "model.png", show_shapes=True)
+    model = Model(inputs=[hand1_input, hand2_input, face_input, triangle_input], outputs=final_output)
+    tf.keras.utils.plot_model(model, "model.png", show_shapes=True)
 
     return model
 
@@ -90,8 +93,13 @@ train_steps = num_training_imgs // batch_size
 def train_gen():
     rep_dict = {104: 0, 1: 1, 118: 2 }
     for (hand_seq, face_seq, triangle_data, centroids, video_imgs, label, video_name_list, triangle_stream) in dataset:
-        yield [hand_seq[:, 0], hand_seq[:, 1], face_seq], tf.constant([rep_dict[x.numpy()] for x in label], dtype=tf.int8)
+        yield [hand_seq[:, 0], hand_seq[:, 1], face_seq, triangle_data], tf.constant([rep_dict[x.numpy()] for x in label], dtype=tf.int8)
+
+callbacks_list = [
+    ModelCheckpoint('src/model', monitor='accuracy', verbose=1, save_best_only=True),
+]
 
 get_sequence_model().fit(train_gen(),
                     steps_per_epoch=train_steps,
-                    epochs=70)
+                    epochs=85,
+                    callbacks=callbacks_list)

@@ -44,8 +44,8 @@ def read_tfrecord(example_proto):
         features = tf.io.parse_single_example(
             example_proto, features=feature_dict)
 
-        triangle_data.append(tf.reshape(
-            features[triangle_stream].values, (1, 13)))
+        triangle_data.append(tf.squeeze(tf.reshape(
+            features[triangle_stream].values, (1, 13))))
 
         centroids.append(tf.reshape(features[centroid_stream].values, (3, 2)))
 
