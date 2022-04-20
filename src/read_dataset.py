@@ -1,5 +1,8 @@
 import tensorflow as tf
 
+from data_augmentation import transform_batch
+
+
 def get_image(img, width, height):
     image = tf.image.decode_jpeg(img, channels=3)
     image = tf.image.resize(image, [width, height])
@@ -9,6 +12,7 @@ def get_image(img, width, height):
     image = tf.image.per_image_standardization(image)
     return image
 
+
 def read_tfrecord(example_proto):
     face = []
     hand_1 = []
@@ -17,7 +21,6 @@ def read_tfrecord(example_proto):
     triangle_stream_arr = []
     triangle_data = []
     centroids = []
-    video = []
 
     for image_count in range(16):
         face_stream = 'face/' + str(image_count)
@@ -51,27 +54,30 @@ def read_tfrecord(example_proto):
 
         triangle_stream_arr.append(triangle_stream)
 
-        width = tf.cast(features['width'], tf.int32)
-        height = tf.cast(features['height'], tf.int32)
+        width = 50  # tf.cast(features['width'], tf.int32)
+        height = 50  # tf.cast(features['height'], tf.int32)
 
         face_image = get_image(features[face_stream], width, height)
         hand_1_image = get_image(features[hand_1_stream], width, height)
         hand_2_image = get_image(features[hand_2_stream], width, height)
-        image = get_image(features[video_stream], 512, 512)
+
+        face_image, hand_1_image, hand_2_image = transform_batch(
+            face_image, hand_1_image, hand_2_image, 50)
 
         face.append(face_image)
         hand_1.append(hand_1_image)
         hand_2.append(hand_2_image)
-        video.append(image)
         video_name.append(features['video_name'])
         label = tf.cast(features['label'], tf.int32)
 
-    return [hand_1, hand_2], face, triangle_data, centroids, video, label, video_name, triangle_stream_arr
+    return [hand_1, hand_2], face, triangle_data, centroids, label, video_name, triangle_stream_arr
+
 
 def load_dataset(tf_record_path):
     raw_dataset = tf.data.TFRecordDataset(tf_record_path)
     parsed_dataset = raw_dataset.map(read_tfrecord)
     return parsed_dataset
+
 
 def prepare_for_training(ds, batch_size, shuffle_buffer_size=25):
     # ds.cache() # I can remove this to don't use cache or use cocodata.tfcache
@@ -80,6 +86,7 @@ def prepare_for_training(ds, batch_size, shuffle_buffer_size=25):
         batch_size).prefetch(tf.data.experimental.AUTOTUNE)
 
     return ds
+
 
 def load_data_tfrecord(tfrecord_path, batch_size):
     dataset = load_dataset(tfrecord_path)
