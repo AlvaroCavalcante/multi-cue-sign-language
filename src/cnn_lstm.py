@@ -44,11 +44,23 @@ def get_sequence_model():
     )
 
     # tf.keras.utils.plot_model(rnn_model, "model.png", show_shapes=True)
+    print(rnn_model.summary())
     return rnn_model
 
 
-def get_base_sequence(input):
-    x = Conv2D(filters=64, kernel_size=3, padding="same",activation="relu")(input)
+def get_hand_sequence(input_1, input_2):
+    merged = Concatenate()([input_1, input_2])
+    x = Conv2D(filters=82, kernel_size=3, padding="same",activation="relu")(merged)
+    x = MaxPooling2D(pool_size=2)(x)
+    x = Conv2D(filters=42, kernel_size=3, padding="same",activation="relu")(x)
+    x = MaxPooling2D(pool_size=2)(x)
+    x = Conv2D(filters=16, kernel_size=3, padding="same",activation="relu")(x)
+    x = MaxPooling2D(pool_size=2)(x)
+    output = GlobalAveragePooling2D()(x)
+    return output
+
+def get_face_sequence(face_input):
+    x = Conv2D(filters=64, kernel_size=3, padding="same",activation="relu")(face_input)
     x = MaxPooling2D(pool_size=2)(x)
     x = Conv2D(filters=32, kernel_size=3, padding="same",activation="relu")(x)
     x = MaxPooling2D(pool_size=2)(x)
@@ -63,11 +75,10 @@ def get_cnn_model():
     face_input = tf.keras.layers.Input(shape=(FACE_WIDTH, FACE_HEIGHT, 3), name='face_input')
     triangle_input = tf.keras.layers.Input(shape=(13), name='triangle_input')
 
-    hand1_seq = get_base_sequence(hand1_input)
-    hand2_seq = get_base_sequence(hand2_input)
-    face_seq = get_base_sequence(face_input)
+    hand_seq = get_hand_sequence(hand1_input, hand2_input)
+    face_seq = get_face_sequence(face_input)
 
-    concat_layers = Concatenate()([hand1_seq, hand2_seq, face_seq])
+    concat_layers = Concatenate()([hand_seq, face_seq])
     final_output = Concatenate()([concat_layers, triangle_input])
 
     model = Model(inputs=[hand1_input, hand2_input, face_input, triangle_input], outputs=final_output)
