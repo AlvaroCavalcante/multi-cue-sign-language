@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
-import tensorflow as tf
-from tensorflow.keras.models import Model, Sequential, load_model
+from tensorflow.keras.models import load_model
 
 from read_dataset import load_data_tfrecord
 
