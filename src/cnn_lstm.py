@@ -16,9 +16,9 @@ try:
 except:
     print('GPU not found')
 
-parser = argparse.ArgumentParses(description='Train a CNN-LSTM model')
-parser.add_argument('--batch_size', type=int, help='Batch size')
-parser.add_argument('--epochs', type=int, help='Number of epochs')
+parser = argparse.ArgumentParser(description='Train a CNN-LSTM model')
+parser.add_argument('--batch_size', type=int, help='Batch size', required=True)
+parser.add_argument('--epochs', type=int, help='Number of epochs', required=True)
 args = parser.parse_args()
 
 MAX_SEQ_LENGTH = 16
@@ -137,3 +137,5 @@ def train_cnn_lstm_model(train_files):
 
     history_frame = pd.DataFrame(result.history)
     history_frame.to_csv('src/history.csv', index=False)
+
+train_cnn_lstm_model(['/home/alvaro/Documentos/multi-cue-sign-language/src/data/batch_1_of_2.tfrecords'])
