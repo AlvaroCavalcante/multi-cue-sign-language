@@ -1,5 +1,3 @@
-import argparse
-
 import tensorflow as tf
 import pandas as pd
 from tensorflow import keras
@@ -16,17 +14,11 @@ try:
 except:
     print('GPU not found')
 
-parser = argparse.ArgumentParser(description='Train a CNN-LSTM model')
-parser.add_argument('--batch_size', type=int, help='Batch size', required=True)
-parser.add_argument('--epochs', type=int, help='Number of epochs', required=True)
-args = parser.parse_args()
 
 MAX_SEQ_LENGTH = 16
 NUMBER_OF_CLASSES = 226
 HAND_WIDTH, HAND_HEIGHT = 50, 50
 FACE_WIDTH, FACE_HEIGHT = 50, 50
-BATCH_SIZE = args.batch_size
-EPOCHS = args.epochs
 
 
 def get_sequence_model():
@@ -117,12 +109,12 @@ def train_gen(dataset):
         yield [hand_seq[:, 0], hand_seq[:, 1], face_seq, triangle_data], label
 
 
-def train_cnn_lstm_model(train_files):
-    dataset = load_data_tfrecord(train_files, BATCH_SIZE)
+def train_cnn_lstm_model(train_files, epochs, batch_size):
+    dataset = load_data_tfrecord(train_files, batch_size)
 
     num_training_imgs = count_data_items(train_files)
 
-    train_steps = num_training_imgs // BATCH_SIZE
+    train_steps = num_training_imgs // batch_size
 
     callbacks_list = [
         ModelCheckpoint('src/model', monitor='accuracy',
@@ -132,10 +124,16 @@ def train_cnn_lstm_model(train_files):
 
     result = get_sequence_model().fit(train_gen(dataset),
                                       steps_per_epoch=train_steps,
-                                      epochs=EPOCHS,
+                                      epochs=epochs,
                                       callbacks=callbacks_list)
 
     history_frame = pd.DataFrame(result.history)
     history_frame.to_csv('src/history.csv', index=False)
 
-train_cnn_lstm_model(['/home/alvaro/Documentos/multi-cue-sign-language/src/data/batch_1_of_2.tfrecords'])
+
+if __name__ == '__main__':
+    train_files = [
+        '/home/alvaro/Documentos/multi-cue-sign-language/src/data/batch_1_of_2.tfrecords']
+    epochs = 80
+    batch_size = 6
+    train_cnn_lstm_model(train_files, epochs, batch_size)
