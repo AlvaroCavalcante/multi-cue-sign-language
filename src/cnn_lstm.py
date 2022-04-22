@@ -113,8 +113,10 @@ def train_cnn_lstm_model(train_files, epochs, batch_size):
     dataset = load_data_tfrecord(train_files, batch_size)
 
     num_training_imgs = count_data_items(train_files)
+    print('Number of training images:', num_training_imgs)
 
     train_steps = num_training_imgs // batch_size
+    print('Training steps: ', train_steps)
 
     callbacks_list = [
         ModelCheckpoint('src/model', monitor='accuracy',
