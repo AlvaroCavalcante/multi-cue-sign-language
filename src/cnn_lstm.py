@@ -4,6 +4,7 @@ from tensorflow import keras
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Concatenate, Conv2D, MaxPooling2D, GlobalAveragePooling2D, TimeDistributed, Flatten
 from tensorflow.keras.callbacks import ModelCheckpoint, LearningRateScheduler
+from tensorflow.keras.applications import EfficientNetB0
 
 from read_dataset import load_data_tfrecord
 import lr_scheduler
@@ -32,7 +33,7 @@ def get_sequence_model():
     # https://keras.io/api/layers/recurrent_layers/gru/
     x = TimeDistributed(cnn_model)(frame_features_input)
     x = keras.layers.GRU(16, return_sequences=True)(x)
-    x = keras.layers.GRU(8)(x)
+    x = keras.layers.GRU(12)(x)
     x = keras.layers.Dropout(0.4)(x)
     x = keras.layers.Dense(8, activation="relu")(x)
     output = keras.layers.Dense(NUMBER_OF_CLASSES, activation="softmax")(x)
@@ -50,14 +51,18 @@ def get_sequence_model():
 
 def get_hand_sequence(input_1, input_2):
     merged = Concatenate()([input_1, input_2])
-    x = Conv2D(filters=82, kernel_size=3,
-               padding="same", activation="relu")(merged)
-    x = MaxPooling2D(pool_size=2)(x)
-    x = Conv2D(filters=42, kernel_size=3, padding="same", activation="relu")(x)
-    x = MaxPooling2D(pool_size=2)(x)
-    x = Conv2D(filters=16, kernel_size=3, padding="same", activation="relu")(x)
-    x = MaxPooling2D(pool_size=2)(x)
-    output = GlobalAveragePooling2D()(x)
+    hand_filter = tf.keras.layers.Conv2D(3, 3, padding='same', name='hand_filter')(merged)
+
+    hand_model = EfficientNetB0(input_shape=(HAND_WIDTH, HAND_HEIGHT, 3),include_top=False)(hand_filter)
+
+    # x = Conv2D(filters=82, kernel_size=3,
+    #            padding="same", activation="relu")(merged)
+    # x = MaxPooling2D(pool_size=2)(x)
+    # x = Conv2D(filters=42, kernel_size=3, padding="same", activation="relu")(x)
+    # x = MaxPooling2D(pool_size=2)(x)
+    # x = Conv2D(filters=16, kernel_size=3, padding="same", activation="relu")(x)
+    # x = MaxPooling2D(pool_size=2)(x)
+    output = GlobalAveragePooling2D()(hand_model)
     return output
 
 
@@ -135,7 +140,7 @@ def train_cnn_lstm_model(train_files, epochs, batch_size):
 
 if __name__ == '__main__':
     train_files = [
-        '/home/alvaro/Documentos/multi-cue-sign-language/src/data/batch_1_of_2.tfrecords']
+        '/home/alvaro/Documentos/video2tfrecord/example/data/batch_1_of_85_2022-04-23-00-15-1650672952.tfrecords']
     epochs = 80
     batch_size = 6
     train_cnn_lstm_model(train_files, epochs, batch_size)
