@@ -72,7 +72,7 @@ def read_tfrecord(example_proto):
 
     return [hand_1, hand_2], face, triangle_data, centroids, label, video_name, triangle_stream_arr
 
-def filter_func(hands, face, triangle_data, centroids, video, label, video_name, triangle_stream_arr):
+def filter_func(hands, face, triangle_data, centroids, label, video_name, triangle_stream_arr):
     return tf.math.greater(label, 206)
 
 
