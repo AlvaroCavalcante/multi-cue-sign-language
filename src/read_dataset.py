@@ -72,6 +72,9 @@ def read_tfrecord(example_proto):
 
     return [hand_1, hand_2], face, triangle_data, centroids, label, video_name, triangle_stream_arr
 
+def filter_func(hands, face, triangle_data, centroids, video, label, video_name, triangle_stream_arr):
+    return tf.math.greater(label, 206)
+
 
 def load_dataset(tf_record_path):
     raw_dataset = tf.data.TFRecordDataset(tf_record_path)
@@ -90,6 +93,7 @@ def prepare_for_training(ds, batch_size, shuffle_buffer_size=25):
 
 def load_data_tfrecord(tfrecord_path, batch_size):
     dataset = load_dataset(tfrecord_path)
+    dataset = dataset.filter(filter_func)
 
     dataset = prepare_for_training(dataset, batch_size)
     return dataset
