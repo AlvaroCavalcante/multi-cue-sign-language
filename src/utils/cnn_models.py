@@ -21,14 +21,14 @@ def get_toy_rnn(input):
     return output
 
 def get_custom_cnn(input):
-    x = Conv2D(filters=82, kernel_size=3,
+    x = Conv2D(filters=120, kernel_size=3,
                padding="same", activation="relu")(input)
     x = MaxPooling2D(pool_size=2)(x)
-    x = Conv2D(filters=42, kernel_size=3, padding="same", activation="relu")(x)
+    x = Conv2D(filters=64, kernel_size=3, padding="same", activation="relu")(x)
+    x = Conv2D(filters=32, kernel_size=3, padding="same", activation="relu")(x)
     x = MaxPooling2D(pool_size=2)(x)
     x = Conv2D(filters=16, kernel_size=3, padding="same", activation="relu")(x)
     x = MaxPooling2D(pool_size=2)(x)
-
     output = GlobalAveragePooling2D()(x)
     return output
 
