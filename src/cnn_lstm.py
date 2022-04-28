@@ -122,8 +122,8 @@ def train_cnn_lstm_model(train_files, epochs, batch_size, learning_rate):
 
 
 if __name__ == '__main__':
-    train_files = [
-        '/home/alvaro/Documentos/video2tfrecord/example/data/batch_1_of_85_2022-04-23-00-15-1650672952.tfrecords']
+    train_files =  tf.io.gfile.glob(
+    '/home/alvaro/Documentos/video2tfrecord/example/train/*.tfrecords')
     epochs = 80
     batch_size = 6
     learning_rate = 0.001
