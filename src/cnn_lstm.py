@@ -17,12 +17,12 @@ except:
 
 
 MAX_SEQ_LENGTH = 16
-NUMBER_OF_CLASSES = 226
+NUMBER_OF_CLASSES = 20
 HAND_WIDTH, HAND_HEIGHT = 50, 50
 FACE_WIDTH, FACE_HEIGHT = 50, 50
 
 
-def get_sequence_model():
+def get_sequence_model(learning_rate):
     cnn_model = get_cnn_model()
 
     frame_features_input = [keras.Input(
@@ -41,7 +41,7 @@ def get_sequence_model():
     rnn_model = keras.Model(frame_features_input, output)
 
     rnn_model.compile(
-        loss="sparse_categorical_crossentropy", optimizer=tf.keras.optimizers.Adam(learning_rate=0.01), metrics=["accuracy"]
+        loss="sparse_categorical_crossentropy", optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate), metrics=["accuracy"]
     )
 
     # tf.keras.utils.plot_model(rnn_model, "model.png", show_shapes=True)
@@ -97,7 +97,7 @@ def train_gen(dataset):
         yield [hand_seq[:, 0], hand_seq[:, 1], face_seq, triangle_data], label
 
 
-def train_cnn_lstm_model(train_files, epochs, batch_size):
+def train_cnn_lstm_model(train_files, epochs, batch_size, learning_rate):
     dataset = load_data_tfrecord(train_files, batch_size)
 
     num_training_imgs = count_data_items(train_files)
@@ -112,7 +112,7 @@ def train_cnn_lstm_model(train_files, epochs, batch_size):
         LearningRateScheduler(lr_scheduler.lr_time_based_decay, verbose=1)
     ]
 
-    result = get_sequence_model().fit(train_gen(dataset),
+    result = get_sequence_model(learning_rate).fit(train_gen(dataset),
                                       steps_per_epoch=train_steps,
                                       epochs=epochs,
                                       callbacks=callbacks_list)
@@ -126,4 +126,5 @@ if __name__ == '__main__':
         '/home/alvaro/Documentos/video2tfrecord/example/data/batch_1_of_85_2022-04-23-00-15-1650672952.tfrecords']
     epochs = 80
     batch_size = 6
-    train_cnn_lstm_model(train_files, epochs, batch_size)
+    learning_rate = 0.001
+    train_cnn_lstm_model(train_files, epochs, batch_size, learning_rate)
