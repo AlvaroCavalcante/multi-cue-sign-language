@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 def lr_time_based_decay(epoch, lr, nb_epoch=0):
     # decay = lr / nb_epoch
-    decay = 0.001
+    decay = 0.0018
     return lr * 1 / (1 + decay * epoch)
 
 
@@ -45,8 +45,8 @@ def plot_lr_decay(lr_function, lr, epoch, nb_epoch):
         return plot_lr_decay(lr_function, lr, epoch+1, nb_epoch)
 
 if __name__ == "__main__":
-    nb_epoch = 80
-    returned_lr = plot_lr_decay(lr_step_decay, [0.001], 0, nb_epoch)
+    nb_epoch = 50
+    returned_lr = plot_lr_decay(lr_time_based_decay, [0.01], 0, nb_epoch)
     print(returned_lr)
 
     plt.plot(list(range(0, (nb_epoch+1))), returned_lr)
