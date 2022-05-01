@@ -22,9 +22,7 @@ HAND_WIDTH, HAND_HEIGHT = 80, 80
 FACE_WIDTH, FACE_HEIGHT = 80, 80
 
 
-def get_sequence_model(learning_rate):
-    cnn_model = get_cnn_model()
-
+def get_recurrent_model(learning_rate, cnn_model):
     frame_features_input = [keras.Input(
         (16, HAND_WIDTH, HAND_HEIGHT, 3), name="input"+str(c)) for c in range(3)]
     frame_features_input.append(keras.Input((16, 13), name='triangle_data'))
@@ -51,13 +49,13 @@ def get_sequence_model(learning_rate):
 
 def get_hand_sequence(input_1, input_2):
     merged = Concatenate()([input_1, input_2])
-    cnn_model = cnn_models.get_custom_cnn(merged)
+    cnn_model = cnn_models.get_mobilenet_model(merged, prefix_name='hand')
 
     return cnn_model
 
 
 def get_face_sequence(face_input):
-    cnn_model = cnn_models.get_custom_cnn(face_input)
+    cnn_model = cnn_models.get_mobilenet_model(face_input, prefix_name='face')
     return cnn_model
 
 
@@ -112,19 +110,23 @@ def train_cnn_lstm_model(train_files, epochs, batch_size, learning_rate):
         LearningRateScheduler(lr_scheduler.lr_time_based_decay, verbose=1)
     ]
 
-    result = get_sequence_model(learning_rate).fit(train_gen(dataset),
+    cnn_model = get_cnn_model()
+    recurrent_model = get_recurrent_model(learning_rate, cnn_model)
+
+    result = recurrent_model.fit(train_gen(dataset),
                                       steps_per_epoch=train_steps,
                                       epochs=epochs,
                                       callbacks=callbacks_list)
 
     history_frame = pd.DataFrame(result.history)
     history_frame.to_csv('src/history.csv', index=False)
+    return history_frame
 
 
 if __name__ == '__main__':
     train_files =  tf.io.gfile.glob(
     '/home/alvaro/Documentos/video2tfrecord/example/train/*.tfrecords')
-    epochs = 80
+    epochs = 50
     batch_size = 6
     learning_rate = 0.001
     train_cnn_lstm_model(train_files, epochs, batch_size, learning_rate)

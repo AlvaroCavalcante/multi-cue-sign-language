@@ -1,7 +1,7 @@
 import tensorflow as tf
+from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 
 from data_augmentation import transform_batch
-
 
 def get_image(img, width, height):
     image = tf.image.decode_jpeg(img, channels=3)
@@ -9,7 +9,8 @@ def get_image(img, width, height):
     # image = tf.reshape(image, tf.stack([height, width, 3]))
     # image = tf.reshape(image, [1, height, width, 3])
     # image = tf.cast(image, dtype='uint8')
-    image = tf.image.per_image_standardization(image)
+    # image = tf.image.per_image_standardization(image)
+    image = preprocess_input(image)
     return image
 
 
@@ -62,7 +63,7 @@ def read_tfrecord(example_proto):
         hand_2_image = get_image(features[hand_2_stream], width, height)
 
         face_image, hand_1_image, hand_2_image = transform_batch(
-            face_image, hand_1_image, hand_2_image, width)
+            face_image, hand_1_image, hand_2_image, 80)
 
         face.append(face_image)
         hand_1.append(hand_1_image)
