@@ -54,15 +54,15 @@ def read_tfrecord(example_proto):
 
         triangle_stream_arr.append(triangle_stream)
 
-        width = 50  # tf.cast(features['width'], tf.int32)
-        height = 50  # tf.cast(features['height'], tf.int32)
+        width = tf.cast(features['width'], tf.int32)
+        height = tf.cast(features['height'], tf.int32)
 
         face_image = get_image(features[face_stream], width, height)
         hand_1_image = get_image(features[hand_1_stream], width, height)
         hand_2_image = get_image(features[hand_2_stream], width, height)
 
         face_image, hand_1_image, hand_2_image = transform_batch(
-            face_image, hand_1_image, hand_2_image, 50)
+            face_image, hand_1_image, hand_2_image, width)
 
         face.append(face_image)
         hand_1.append(hand_1_image)
