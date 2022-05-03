@@ -1,5 +1,7 @@
 import tensorflow as tf
 import pandas as pd
+import matplotlib.pyplot as plt
+
 from tensorflow import keras
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Concatenate, TimeDistributed
@@ -89,9 +91,26 @@ def count_data_items(tfrecord):
 
     return count
 
+def plot_dist(label_arr):
+    plt.bar(list(label_arr.keys()), height=list(label_arr.values()), color='blue')
+    plt.savefig('label_dist.png')
+
+label_dist = {}
+plot_label_dist = False
 
 def train_gen(dataset):
     for (hand_seq, face_seq, triangle_data, centroids, label, video_name_list, triangle_stream) in dataset:
+
+        if plot_label_dist:
+            for lbl in label:
+                lbl = tf.constant(lbl).numpy()
+                if not label_dist.get(lbl):
+                    label_dist[int(lbl)] = 1
+                else:
+                    label_dist[int(lbl)] += 1
+
+            plot_dist(label_dist)
+
         yield [hand_seq[:, 0], hand_seq[:, 1], face_seq, triangle_data], label
 
 
