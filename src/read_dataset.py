@@ -94,7 +94,7 @@ def prepare_for_training(ds, batch_size, shuffle_buffer_size=300):
 
 def load_data_tfrecord(tfrecord_path, batch_size):
     dataset = load_dataset(tfrecord_path)
-    dataset = dataset.filter(filter_func)
+    # dataset = dataset.filter(filter_func) # use this to get a small amount of classes
 
     dataset = prepare_for_training(dataset, batch_size)
     return dataset

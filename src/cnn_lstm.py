@@ -19,7 +19,7 @@ except:
 
 
 MAX_SEQ_LENGTH = 16
-NUMBER_OF_CLASSES = 20
+NUMBER_OF_CLASSES = 226
 HAND_WIDTH, HAND_HEIGHT = 80, 80
 FACE_WIDTH, FACE_HEIGHT = 80, 80
 
@@ -29,13 +29,11 @@ def get_recurrent_model(learning_rate, cnn_model):
         (16, HAND_WIDTH, HAND_HEIGHT, 3), name="input"+str(c)) for c in range(3)]
     frame_features_input.append(keras.Input((16, 13), name='triangle_data'))
 
-    # Refer to the following tutorial to understand the significance of using `mask`:
-    # https://keras.io/api/layers/recurrent_layers/gru/
     x = TimeDistributed(cnn_model)(frame_features_input)
-    x = keras.layers.GRU(16, return_sequences=True)(x)
-    x = keras.layers.GRU(12)(x)
+    x = keras.layers.GRU(128, return_sequences=True)(x)
+    x = keras.layers.GRU(64)(x)
     x = keras.layers.Dropout(0.4)(x)
-    x = keras.layers.Dense(8, activation="relu")(x)
+    x = keras.layers.Dense(32, activation="relu")(x)
     output = keras.layers.Dense(NUMBER_OF_CLASSES, activation="softmax")(x)
 
     rnn_model = keras.Model(frame_features_input, output)
@@ -78,7 +76,7 @@ def get_cnn_model():
 
     model = Model(inputs=[hand1_input, hand2_input,
                   face_input, triangle_input], outputs=final_output)
-    # tf.keras.utils.plot_model(model, "model.png", show_shapes=True)
+    tf.keras.utils.plot_model(model, "model.png", show_shapes=True)
 
     return model
 
@@ -124,8 +122,8 @@ def train_cnn_lstm_model(train_files, epochs, batch_size, learning_rate):
     print('Training steps: ', train_steps)
 
     callbacks_list = [
-        ModelCheckpoint('src/model', monitor='accuracy',
-                        verbose=1, save_best_only=True),
+        # ModelCheckpoint('src/model', monitor='accuracy',
+        #                 verbose=1, save_best_only=True),
         LearningRateScheduler(lr_scheduler.lr_time_based_decay, verbose=1)
     ]
 
@@ -144,8 +142,8 @@ def train_cnn_lstm_model(train_files, epochs, batch_size, learning_rate):
 
 if __name__ == '__main__':
     train_files =  tf.io.gfile.glob(
-    '/home/alvaro/Documentos/video2tfrecord/example/train/*.tfrecords')
+    '/home/alvaro/Desktop/video2tfrecord/example/train/*.tfrecords')
     epochs = 50
-    batch_size = 6
+    batch_size = 12
     learning_rate = 0.001
     train_cnn_lstm_model(train_files, epochs, batch_size, learning_rate)
