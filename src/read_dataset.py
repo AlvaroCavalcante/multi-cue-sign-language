@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
-
 from data_augmentation import transform_batch
+
 
 def get_image(img, width, height):
     image = tf.image.decode_jpeg(img, channels=3)
@@ -72,6 +72,7 @@ def read_tfrecord(example_proto):
         label = tf.cast(features['label'], tf.int32)
 
     return [hand_1, hand_2], face, triangle_data, centroids, label, video_name, triangle_stream_arr
+
 
 def filter_func(hands, face, triangle_data, centroids, label, video_name, triangle_stream_arr):
     return tf.math.less(label, 20)

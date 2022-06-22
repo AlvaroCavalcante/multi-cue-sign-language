@@ -30,16 +30,17 @@ def get_recurrent_model(learning_rate, cnn_model):
     frame_features_input.append(keras.Input((16, 13), name='triangle_data'))
 
     x = TimeDistributed(cnn_model)(frame_features_input)
+    x = keras.layers.GRU(256, return_sequences=True)(x)
     x = keras.layers.GRU(128, return_sequences=True)(x)
-    x = keras.layers.GRU(64)(x)
-    x = keras.layers.Dropout(0.4)(x)
-    x = keras.layers.Dense(32, activation="relu")(x)
-    output = keras.layers.Dense(NUMBER_OF_CLASSES, activation="softmax")(x)
+    x = keras.layers.GRU(128)(x)
+    x = keras.layers.Dropout(0.25)(x)
+    x = keras.layers.Dense(64, activation='relu')(x)
+    output = keras.layers.Dense(NUMBER_OF_CLASSES, activation='softmax')(x)
 
     rnn_model = keras.Model(frame_features_input, output)
 
     rnn_model.compile(
-        loss="sparse_categorical_crossentropy", optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate), metrics=["accuracy"]
+        loss='sparse_categorical_crossentropy', optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate), metrics=["accuracy"]
     )
 
     # tf.keras.utils.plot_model(rnn_model, "model.png", show_shapes=True)
@@ -112,23 +113,26 @@ def train_gen(dataset):
         yield [hand_seq[:, 0], hand_seq[:, 1], face_seq, triangle_data], label
 
 
-def train_cnn_lstm_model(train_files, epochs, batch_size, learning_rate):
+def train_cnn_lstm_model(train_files, epochs, batch_size, learning_rate, load_weights=False):
     dataset = load_data_tfrecord(train_files, batch_size)
 
-    num_training_imgs = count_data_items(train_files)
-    print('Number of training images:', num_training_imgs)
+    num_training_videos = 28112 # count_data_items(train_files)
+    print('Number of training videos:', num_training_videos)
 
-    train_steps = num_training_imgs // batch_size
+    train_steps = num_training_videos // batch_size
     print('Training steps: ', train_steps)
 
     callbacks_list = [
-        # ModelCheckpoint('src/model', monitor='accuracy',
-        #                 verbose=1, save_best_only=True),
+        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/model_finetune/', monitor='accuracy',
+                        verbose=1, save_best_only=True, save_weights_only=True),
         LearningRateScheduler(lr_scheduler.lr_time_based_decay, verbose=1)
     ]
 
     cnn_model = get_cnn_model()
     recurrent_model = get_recurrent_model(learning_rate, cnn_model)
+
+    if load_weights:
+        recurrent_model.load_weights('/home/alvaro/Desktop/multi-cue-sign-language/src/model/')
 
     result = recurrent_model.fit(train_gen(dataset),
                                       steps_per_epoch=train_steps,
@@ -143,7 +147,7 @@ def train_cnn_lstm_model(train_files, epochs, batch_size, learning_rate):
 if __name__ == '__main__':
     train_files =  tf.io.gfile.glob(
     '/home/alvaro/Desktop/video2tfrecord/example/train/*.tfrecords')
-    epochs = 50
+    epochs = 25
     batch_size = 12
-    learning_rate = 0.001
+    learning_rate = 0.00001
     train_cnn_lstm_model(train_files, epochs, batch_size, learning_rate)
