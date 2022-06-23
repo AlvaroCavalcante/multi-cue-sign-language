@@ -55,11 +55,11 @@ def get_mobilenet_model(input, prefix_name, fine_tune=False):
         layer._name = prefix_name + str(layer.name)
     
     if fine_tune:
-        for layer in model.layers[60:]:
+        for layer in base_model.layers[60:]:
             if not isinstance(layer, layers.BatchNormalization):
                 layer.trainable = True
     else:
-        model.trainable = True
+        base_model.trainable = True
 
     model = base_model(input_filter)
 

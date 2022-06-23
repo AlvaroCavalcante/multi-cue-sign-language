@@ -50,13 +50,13 @@ def get_recurrent_model(learning_rate, cnn_model):
 
 def get_hand_sequence(input_1, input_2):
     merged = Concatenate()([input_1, input_2])
-    cnn_model = cnn_models.get_mobilenet_model(merged, prefix_name='hand')
+    cnn_model = cnn_models.get_mobilenet_model(merged, prefix_name='hand', fine_tune=True)
 
     return cnn_model
 
 
 def get_face_sequence(face_input):
-    cnn_model = cnn_models.get_mobilenet_model(face_input, prefix_name='face')
+    cnn_model = cnn_models.get_mobilenet_model(face_input, prefix_name='face', fine_tune=True)
     return cnn_model
 
 
@@ -125,7 +125,7 @@ def train_cnn_lstm_model(train_files, epochs, batch_size, learning_rate, load_we
     callbacks_list = [
         ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/model_finetune/', monitor='accuracy',
                         verbose=1, save_best_only=True, save_weights_only=True),
-        LearningRateScheduler(lr_scheduler.lr_time_based_decay, verbose=1)
+        LearningRateScheduler(lr_scheduler.lr_asc_desc_decay, verbose=1)
     ]
 
     cnn_model = get_cnn_model()
@@ -150,4 +150,4 @@ if __name__ == '__main__':
     epochs = 25
     batch_size = 12
     learning_rate = 0.00001
-    train_cnn_lstm_model(train_files, epochs, batch_size, learning_rate)
+    train_cnn_lstm_model(train_files, epochs, batch_size, learning_rate, True)
