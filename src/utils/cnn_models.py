@@ -3,6 +3,7 @@ from tensorflow.keras.layers import Concatenate, Conv2D, MaxPooling2D, GlobalAve
 from tensorflow.keras.applications import EfficientNetB0, MobileNetV2
 from tensorflow.keras import layers
 
+
 def get_toy_rnn(input):
     x = Conv2D(32, 3, activation="relu")(input)
     x = Conv2D(64, 3, activation="relu")(x)
@@ -21,6 +22,7 @@ def get_toy_rnn(input):
 
     return output
 
+
 def get_custom_cnn(input):
     x = Conv2D(filters=120, kernel_size=3,
                padding="same", activation="relu")(input)
@@ -33,33 +35,45 @@ def get_custom_cnn(input):
     output = GlobalAveragePooling2D()(x)
     return output
 
-def get_efficientnet_model(input, prefix_name):
-    input_filter = tf.keras.layers.Conv2D(3, 3, padding='same', name=prefix_name+'_filter')(input)
 
-    base_model = EfficientNetB0(weights=None, pooling='max', include_top=False)(input_filter)
+def get_efficientnet_model(input, prefix_name, fine_tune=False):
+    input_filter = tf.keras.layers.Conv2D(
+        3, 3, padding='same', name=prefix_name+'_filter')(input)
 
-    # base_model._name = prefix_name + base_model._name
-    # for layer in base_model.layers:
-    #     layer._name = prefix_name + str(layer.name)
+    base_model = EfficientNetB0(
+        weights='imagenet', pooling='max', include_top=False)
+
+    base_model._name = prefix_name + base_model._name
+    base_model.trainable = False
+
+    for layer in base_model.layers:
+        layer._name = prefix_name + str(layer.name)
+
+    if fine_tune:
+        for layer in base_model.layers[60:]:
+            if not isinstance(layer, layers.BatchNormalization):
+                layer.trainable = True        
 
     model = base_model(input_filter)
     return model
 
-def get_mobilenet_model(input, prefix_name, fine_tune=False):
-    input_filter = tf.keras.layers.Conv2D(3, 3, padding='same', name=prefix_name+'_filter')(input)
 
-    base_model = MobileNetV2(pooling='max', weights='imagenet', include_top=False)
+def get_mobilenet_model(input, prefix_name, fine_tune=False):
+    input_filter = tf.keras.layers.Conv2D(
+        3, 3, padding='same', name=prefix_name+'_filter')(input)
+
+    base_model = MobileNetV2(
+        pooling='max', weights='imagenet', include_top=False)
     base_model._name = prefix_name + base_model._name
-    
+    base_model.trainable = True
+
     for layer in base_model.layers:
         layer._name = prefix_name + str(layer.name)
-    
+
     if fine_tune:
         for layer in base_model.layers[60:]:
             if not isinstance(layer, layers.BatchNormalization):
-                layer.trainable = True
-    else:
-        base_model.trainable = True
+                layer.trainable = True        
 
     model = base_model(input_filter)
 
