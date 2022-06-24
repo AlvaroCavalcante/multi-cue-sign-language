@@ -40,19 +40,19 @@ def get_efficientnet_model(input, prefix_name, fine_tune=False):
     input_filter = tf.keras.layers.Conv2D(
         3, 3, padding='same', name=prefix_name+'_filter')(input)
 
-    base_model = EfficientNetB0(
+    base_model = EfficientNetB0( # EMA (Exponential Moving Average) is very helpful in training EfficientNet from scratch.
         weights='imagenet', pooling='max', include_top=False)
 
     base_model._name = prefix_name + base_model._name
     base_model.trainable = False
 
-    for layer in base_model.layers:
-        layer._name = prefix_name + str(layer.name)
-
-    if fine_tune:
-        for layer in base_model.layers[60:]:
-            if not isinstance(layer, layers.BatchNormalization):
-                layer.trainable = True        
+    for layer_n, layer in enumerate(base_model.layers):
+        layer._name = prefix_name + str(layer.name) # Each block needs to be all turned on or off.
+        if fine_tune:
+            if not isinstance(layer, layers.BatchNormalization) and layer_n > 118:
+                base_model.layers[layer_n].trainable = True
+        else:
+            layer.trainable = False
 
     model = base_model(input_filter)
     return model
@@ -65,15 +65,15 @@ def get_mobilenet_model(input, prefix_name, fine_tune=False):
     base_model = MobileNetV2(
         pooling='max', weights='imagenet', include_top=False)
     base_model._name = prefix_name + base_model._name
-    base_model.trainable = True
 
-    for layer in base_model.layers:
+    for layer_n, layer in enumerate(base_model.layers):
         layer._name = prefix_name + str(layer.name)
 
-    if fine_tune:
-        for layer in base_model.layers[60:]:
-            if not isinstance(layer, layers.BatchNormalization):
-                layer.trainable = True        
+        if fine_tune:
+            if isinstance(layer, layers.BatchNormalization) or layer_n < 110:
+                layer.trainable = False        
+        else:
+            layer.trainable = False
 
     model = base_model(input_filter)
 
