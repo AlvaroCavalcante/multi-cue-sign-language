@@ -1,8 +1,6 @@
 from datetime import datetime
 
 import tensorflow as tf
-import pandas as pd
-import matplotlib.pyplot as plt
 from tensorflow import keras
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Concatenate, TimeDistributed
@@ -49,21 +47,21 @@ def get_recurrent_model(learning_rate, cnn_model):
     return rnn_model
 
 
-def get_hand_sequence(input_1, input_2):
+def get_hand_sequence(input_1, input_2, fine_tune):
     merged = Concatenate()([input_1, input_2])
-    cnn_model = cnn_models.get_mobilenet_model(
-        merged, prefix_name='hand', fine_tune=True)
+    cnn_model = cnn_models.get_efficientnet_model(
+        merged, prefix_name='hand', fine_tune=fine_tune)
 
     return cnn_model
 
 
-def get_face_sequence(face_input):
-    cnn_model = cnn_models.get_mobilenet_model(
-        face_input, prefix_name='face', fine_tune=True)
+def get_face_sequence(face_input, fine_tune):
+    cnn_model = cnn_models.get_efficientnet_model(
+        face_input, prefix_name='face', fine_tune=fine_tune)
     return cnn_model
 
 
-def get_cnn_model():
+def get_cnn_model(fine_tune=False):
     hand1_input = tf.keras.layers.Input(
         shape=(HAND_WIDTH, HAND_HEIGHT, 3), name='hand1_input')
     hand2_input = tf.keras.layers.Input(
@@ -72,8 +70,8 @@ def get_cnn_model():
         shape=(FACE_WIDTH, FACE_HEIGHT, 3), name='face_input')
     triangle_input = tf.keras.layers.Input(shape=(13), name='triangle_input')
 
-    hand_seq = get_hand_sequence(hand1_input, hand2_input)
-    face_seq = get_face_sequence(face_input)
+    hand_seq = get_hand_sequence(hand1_input, hand2_input, fine_tune)
+    face_seq = get_face_sequence(face_input, fine_tune)
 
     concat_layers = Concatenate()([hand_seq, face_seq])
     final_output = Concatenate()([concat_layers, triangle_input])
@@ -94,29 +92,8 @@ def count_data_items(tfrecord):
     return count
 
 
-def plot_dist(label_arr):
-    plt.bar(list(label_arr.keys()), height=list(
-        label_arr.values()), color='blue')
-    plt.savefig('label_dist.png')
-
-
-label_dist = {}
-plot_label_dist = False
-
-
 def train_gen(dataset):
     for (hand_seq, face_seq, triangle_data, centroids, label, video_name_list, triangle_stream) in dataset:
-
-        if plot_label_dist:
-            for lbl in label:
-                lbl = tf.constant(lbl).numpy()
-                if not label_dist.get(lbl):
-                    label_dist[int(lbl)] = 1
-                else:
-                    label_dist[int(lbl)] += 1
-
-            plot_dist(label_dist)
-
         yield [hand_seq[:, 0], hand_seq[:, 1], face_seq, triangle_data], label
 
 
@@ -133,18 +110,18 @@ def train_cnn_lstm_model(train_files, epochs, batch_size, learning_rate, load_we
     tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
 
     callbacks_list = [
-        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/model/', monitor='accuracy',
+        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/model/efficient_net_b0_fine/', monitor='accuracy',
                         verbose=1, save_best_only=True, save_weights_only=True),
         LearningRateScheduler(lr_scheduler.lr_asc_desc_decay, verbose=1),
         tensorboard_callback
     ]
 
-    cnn_model = get_cnn_model()
+    cnn_model = get_cnn_model(load_weights)
     recurrent_model = get_recurrent_model(learning_rate, cnn_model)
 
     if load_weights:
         recurrent_model.load_weights(
-            '/home/alvaro/Desktop/multi-cue-sign-language/src/model/')
+            '/home/alvaro/Desktop/multi-cue-sign-language/src/model/efficient_net_b0/')
 
     recurrent_model.fit(train_gen(dataset),
                         steps_per_epoch=train_steps,
@@ -155,7 +132,7 @@ def train_cnn_lstm_model(train_files, epochs, batch_size, learning_rate, load_we
 if __name__ == '__main__':
     train_files = tf.io.gfile.glob(
         '/home/alvaro/Desktop/video2tfrecord/example/train/*.tfrecords')
-    epochs = 25
-    batch_size = 12
+    epochs = 50
+    batch_size = 14
     learning_rate = 0.00001
-    train_cnn_lstm_model(train_files, epochs, batch_size, learning_rate, False)
+    train_cnn_lstm_model(train_files, epochs, batch_size, learning_rate, True)
