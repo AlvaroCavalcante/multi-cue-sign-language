@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow.keras.layers import Concatenate, Conv2D, MaxPooling2D, GlobalAveragePooling2D, TimeDistributed, add
 from tensorflow.keras.applications import EfficientNetB0, MobileNetV2
 from tensorflow.keras import layers
-import utils
+from utils import utils
 
 def get_toy_rnn(input):
     x = Conv2D(32, 3, activation="relu")(input)
@@ -48,7 +48,7 @@ def get_efficientnet_model(input, prefix_name, fine_tune=False):
     for layer_n, layer in enumerate(base_model.layers):
         layer._name = prefix_name + str(layer.name) # Each block needs to be all turned on or off.
         if fine_tune:
-            if isinstance(layer, layers.BatchNormalization) or layer_n < 162: # 75 block 3 # 119 block 4
+            if isinstance(layer, layers.BatchNormalization) or layer_n < 75: # 75 block 3 # 119 block 4 # 162 block 5
                 base_model.layers[layer_n].trainable = False
         else:
             layer.trainable = False

@@ -110,7 +110,7 @@ def train_cnn_lstm_model(train_files, epochs, batch_size, learning_rate, load_we
     tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
 
     callbacks_list = [
-        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/model/efficient_net_b0_fine/', monitor='accuracy',
+        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/model/efficient_net_b0_fine_v2/', monitor='accuracy',
                         verbose=1, save_best_only=True, save_weights_only=True),
         LearningRateScheduler(lr_scheduler.lr_asc_desc_decay, verbose=1),
         tensorboard_callback
@@ -121,7 +121,7 @@ def train_cnn_lstm_model(train_files, epochs, batch_size, learning_rate, load_we
 
     if load_weights:
         recurrent_model.load_weights(
-            '/home/alvaro/Desktop/multi-cue-sign-language/src/model/efficient_net_b0/')
+            '/home/alvaro/Desktop/multi-cue-sign-language/src/model/efficient_net_b0_fine/')
 
     recurrent_model.fit(train_gen(dataset),
                         steps_per_epoch=train_steps,
@@ -132,7 +132,7 @@ def train_cnn_lstm_model(train_files, epochs, batch_size, learning_rate, load_we
 if __name__ == '__main__':
     train_files = tf.io.gfile.glob(
         '/home/alvaro/Desktop/video2tfrecord/example/train/*.tfrecords')
-    epochs = 50
+    epochs = 35
     batch_size = 14
-    learning_rate = 0.00001
+    learning_rate = 0.0001
     train_cnn_lstm_model(train_files, epochs, batch_size, learning_rate, True)
