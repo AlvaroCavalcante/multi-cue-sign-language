@@ -29,9 +29,9 @@ def get_recurrent_model(learning_rate, cnn_model):
     frame_features_input.append(keras.Input((16, 13), name='triangle_data'))
 
     x = TimeDistributed(cnn_model)(frame_features_input)
-    x = keras.layers.GRU(256, return_sequences=True)(x)
-    x = keras.layers.GRU(128, return_sequences=True)(x)
-    x = keras.layers.GRU(128)(x)
+    x = keras.layers.LSTM(256, return_sequences=True)(x)
+    x = keras.layers.LSTM(128, return_sequences=True)(x)
+    x = keras.layers.LSTM(128)(x)
     x = keras.layers.Dropout(0.25)(x)
     x = keras.layers.Dense(64, activation='relu')(x)
     output = keras.layers.Dense(NUMBER_OF_CLASSES, activation='softmax')(x)
@@ -39,7 +39,7 @@ def get_recurrent_model(learning_rate, cnn_model):
     rnn_model = keras.Model(frame_features_input, output)
 
     rnn_model.compile(
-        loss='sparse_categorical_crossentropy', optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate), metrics=["accuracy"]
+        loss='sparse_categorical_crossentropy', optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate), metrics=['accuracy']
     )
 
     # tf.keras.utils.plot_model(rnn_model, "model.png", show_shapes=True)
@@ -110,9 +110,9 @@ def train_cnn_lstm_model(train_files, epochs, batch_size, learning_rate, load_we
     tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
 
     callbacks_list = [
-        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/model/efficient_net_b0_fine_v2/', monitor='accuracy',
+        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/model/lstm_efficientnet/', monitor='accuracy',
                         verbose=1, save_best_only=True, save_weights_only=True),
-        LearningRateScheduler(lr_scheduler.lr_asc_desc_decay, verbose=1),
+        LearningRateScheduler(lr_scheduler.lr_time_based_decay, verbose=1),
         tensorboard_callback
     ]
 
@@ -132,7 +132,7 @@ def train_cnn_lstm_model(train_files, epochs, batch_size, learning_rate, load_we
 if __name__ == '__main__':
     train_files = tf.io.gfile.glob(
         '/home/alvaro/Desktop/video2tfrecord/example/train/*.tfrecords')
-    epochs = 35
+    epochs = 50
     batch_size = 14
-    learning_rate = 0.0001
-    train_cnn_lstm_model(train_files, epochs, batch_size, learning_rate, True)
+    learning_rate = 0.001
+    train_cnn_lstm_model(train_files, epochs, batch_size, learning_rate, False)
