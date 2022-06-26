@@ -46,7 +46,7 @@ def plot_lr_decay(lr_function, lr, epoch, nb_epoch):
 
 if __name__ == "__main__":
     nb_epoch = 50
-    returned_lr = plot_lr_decay(lr_time_based_decay, [0.001], 0, nb_epoch)
+    returned_lr = plot_lr_decay(lr_asc_desc_decay, [0.00001], 0, nb_epoch)
     print(returned_lr)
 
     plt.plot(list(range(0, (nb_epoch+1))), returned_lr)
