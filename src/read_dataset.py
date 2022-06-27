@@ -138,7 +138,7 @@ def prepare_data(ds, batch_size, train, shuffle_buffer_size=300):
         ds = ds.repeat().shuffle(buffer_size=shuffle_buffer_size).batch(
             batch_size).prefetch(tf.data.experimental.AUTOTUNE)
     else:
-        ds = ds.shuffle(buffer_size=shuffle_buffer_size).batch(
+        ds = ds.batch(
             batch_size)
 
     return ds
