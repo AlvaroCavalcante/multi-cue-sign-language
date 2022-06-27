@@ -25,6 +25,14 @@ def eval_gen():
         yield [hand_seq[:, 0], hand_seq[:, 1], face_seq, triangle_data], label
 
 
+def show_confusion_matrix(y_true, pred):
+    confusion_mtx = confusion_matrix(y_true, pred)
+    matrix_img = sns.heatmap(confusion_mtx, annot=True)
+    fig = matrix_img.get_figure()
+    fig.savefig("out.png") 
+    plt.show()
+
+
 cnn_model = cnn_lstm.get_cnn_model(False)
 recurrent_model = cnn_lstm.get_recurrent_model(0.0001, cnn_model)
 
@@ -36,19 +44,20 @@ class_vocab = pd.read_csv('./src/utils/class_id_correspondence.csv')
 # result = recurrent_model.evaluate(dataset)
 true_categories = tf.concat([y for _, y in dataset], axis=0)
 
-predictions = recurrent_model.predict(dataset, steps=100)
+predictions = recurrent_model.predict(dataset)
 class_prediction = tf.argmax(predictions, axis=1)
 
 
-def show_confusion_matrix(y_true, pred):
-    confusion_mtx = confusion_matrix(y_true, pred)
-    matrix_img = sns.heatmap(confusion_mtx, annot=True)
-    fig = matrix_img.get_figure()
-    fig.savefig("out.png") 
-    plt.show()
+# show_confusion_matrix(true_categories[0:500], class_prediction)
 
+errors = {}
+for i, val in enumerate(true_categories):
+    if val != class_prediction[i]:
+        if errors.get(val):
+            errors[val] += 1
+        else:
+            errors[val] = 1
 
-show_confusion_matrix(true_categories[0:500], class_prediction)
 print('finished')
 
 # for data, label in eval_gen():
