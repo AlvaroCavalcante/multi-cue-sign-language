@@ -43,7 +43,7 @@ recurrent_model.load_weights(
 class_vocab = pd.read_csv('./src/utils/class_id_correspondence.csv')
 
 # result = recurrent_model.evaluate(dataset)
-true_categories = tf.concat([y for _, y, _ in dataset], axis=0)
+# true_categories = tf.concat([y for _, y, _ in dataset], axis=0)
 
 predictions = []
 video_names = []
@@ -56,11 +56,11 @@ for data, label, video_name in dataset:
     predictions.extend(class_prediction)
     video_names.extend(list([name.numpy() for name in video_name]))
     correct_prediction.extend(list(
-        [pred == true_categories[i].numpy() for i, pred in enumerate(class_prediction)]))
+        [label[i].numpy() in np.argsort(proba)[::-1][0:3] for i, proba in enumerate(probabilities)]))
 
 prediction_df = pd.DataFrame(
     {'predictions': predictions, 'video_names': video_names, 'correct_prediction': correct_prediction})
-prediction_df.to_csv('predictions.csv', index=False)
+prediction_df.to_csv('top3_predictions.csv', index=False)
 
 # predictions = recurrent_model.predict(dataset)
 # class_prediction = tf.argmax(predictions, axis=1)
