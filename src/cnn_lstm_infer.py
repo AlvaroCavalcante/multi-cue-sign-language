@@ -9,15 +9,16 @@ from sklearn.metrics import confusion_matrix
 from read_dataset import load_data_tfrecord
 import cnn_lstm
 
-tf.config.set_visible_devices([], 'GPU')
-visible_devices = tf.config.get_visible_devices()
-for device in visible_devices:
-    assert device.device_type != 'GPU'
+if False:  # disable GPU if necessary
+    tf.config.set_visible_devices([], 'GPU')
+    visible_devices = tf.config.get_visible_devices()
+    for device in visible_devices:
+        assert device.device_type != 'GPU'
 
 files = tf.io.gfile.glob(
     '/home/alvaro/Desktop/video2tfrecord/example/train/*.tfrecords')
 
-dataset = load_data_tfrecord(files, 5, False)
+dataset = load_data_tfrecord(files, 24, False)
 
 
 def eval_gen():
@@ -29,7 +30,7 @@ def show_confusion_matrix(y_true, pred):
     confusion_mtx = confusion_matrix(y_true, pred)
     matrix_img = sns.heatmap(confusion_mtx, annot=True)
     fig = matrix_img.get_figure()
-    fig.savefig("out.png") 
+    fig.savefig("out.png")
     plt.show()
 
 
@@ -42,26 +43,27 @@ recurrent_model.load_weights(
 class_vocab = pd.read_csv('./src/utils/class_id_correspondence.csv')
 
 # result = recurrent_model.evaluate(dataset)
-true_categories = tf.concat([y for _, y in dataset], axis=0)
+true_categories = tf.concat([y for _, y, _ in dataset], axis=0)
 
-predictions = recurrent_model.predict(dataset)
-class_prediction = tf.argmax(predictions, axis=1)
+predictions = []
+video_names = []
+correct_prediction = []
+count = 0
+
+for data, label, video_name in dataset:
+    probabilities = recurrent_model.predict(data)
+    class_prediction = list([np.argmax(proba) for proba in probabilities])
+    predictions.extend(class_prediction)
+    video_names.extend(list([name.numpy() for name in video_name]))
+    correct_prediction.extend(list(
+        [pred == true_categories[i].numpy() for i, pred in enumerate(class_prediction)]))
+
+prediction_df = pd.DataFrame(
+    {'predictions': predictions, 'video_names': video_names, 'correct_prediction': correct_prediction})
+prediction_df.to_csv('predictions.csv', index=False)
+
+# predictions = recurrent_model.predict(dataset)
+# class_prediction = tf.argmax(predictions, axis=1)
 
 
 # show_confusion_matrix(true_categories[0:500], class_prediction)
-
-errors = {}
-for i, val in enumerate(true_categories):
-    if val != class_prediction[i]:
-        if errors.get(val):
-            errors[val] += 1
-        else:
-            errors[val] = 1
-
-print('finished')
-
-# for data, label in eval_gen():
-#     probabilities = recurrent_model.predict(data)[0]
-#     class_prediction = np.argsort(probabilities)[::-1]
-
-#     print(f"  {class_vocab.iloc[i]['EN']}: {probabilities[i] * 100:5.2f}%")

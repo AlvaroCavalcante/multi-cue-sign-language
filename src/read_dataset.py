@@ -31,6 +31,7 @@ def read_tfrecord_test(example_proto):
             hand_1_stream: tf.io.FixedLenFeature([], tf.string),
             hand_2_stream: tf.io.FixedLenFeature([], tf.string),
             triangle_stream: tf.io.VarLenFeature(tf.float32),
+            'video_name': tf.io.FixedLenFeature([], tf.string),
             'height': tf.io.FixedLenFeature([], tf.int64),
             'width': tf.io.FixedLenFeature([], tf.int64),
             'label': tf.io.FixedLenFeature([], tf.int64)
@@ -52,9 +53,11 @@ def read_tfrecord_test(example_proto):
         face.append(face_image)
         hand_1.append(hand_1_image)
         hand_2.append(hand_2_image)
-        label = tf.cast(features['label'], tf.int32)
 
-    return (hand_1, hand_2, face, triangle_data), label
+    video_name = features['video_name']
+    label = tf.cast(features['label'], tf.int32)
+
+    return (hand_1, hand_2, face, triangle_data), label, video_name
 
 
 def read_tfrecord_train(example_proto):
