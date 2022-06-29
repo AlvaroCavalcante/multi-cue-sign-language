@@ -38,7 +38,7 @@ cnn_model = cnn_lstm.get_cnn_model(False)
 recurrent_model = cnn_lstm.get_recurrent_model(0.0001, cnn_model)
 
 recurrent_model.load_weights(
-    '/home/alvaro/Desktop/multi-cue-sign-language/src/models/efficient_net_b0_fine_v2/')
+    '/home/alvaro/Desktop/multi-cue-sign-language/src/models/lstm_efficientnet_fine/')
 
 class_vocab = pd.read_csv('./src/utils/class_id_correspondence.csv')
 
@@ -60,7 +60,7 @@ for data, label, video_name in dataset:
 
 prediction_df = pd.DataFrame(
     {'predictions': predictions, 'video_names': video_names, 'correct_prediction': correct_prediction})
-prediction_df.to_csv('top3_predictions.csv', index=False)
+prediction_df.to_csv('top3_predictions_lstm.csv', index=False)
 
 # predictions = recurrent_model.predict(dataset)
 # class_prediction = tf.argmax(predictions, axis=1)

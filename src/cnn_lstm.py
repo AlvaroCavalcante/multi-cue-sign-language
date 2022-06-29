@@ -7,6 +7,7 @@ from tensorflow.keras.layers import Concatenate, TimeDistributed
 from tensorflow.keras.callbacks import ModelCheckpoint, LearningRateScheduler
 
 from read_dataset import load_data_tfrecord
+from utils import utils
 from utils import lr_scheduler
 from utils import cnn_models
 
@@ -83,34 +84,28 @@ def get_cnn_model(fine_tune=False):
     return model
 
 
-def count_data_items(tfrecord):
-    count = 0
-    for fn in tfrecord:
-        for _ in tf.compat.v1.python_io.tf_record_iterator(fn):
-            count += 1
-
-    return count
-
-
 def train_gen(dataset):
     for (hand_seq, face_seq, triangle_data, centroids, label, video_name_list, triangle_stream) in dataset:
         yield [hand_seq[:, 0], hand_seq[:, 1], face_seq, triangle_data], label
 
 
-def train_cnn_lstm_model(train_files, epochs, batch_size, learning_rate, load_weights=False):
+def eval_gen(dataset):
+    for (data, label, video_name) in dataset:
+        yield data, label
+
+
+def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_rate, load_weights=False):
     dataset = load_data_tfrecord(train_files, batch_size)
+    dataset_eval = load_data_tfrecord(eval_files, batch_size, False)
 
-    num_training_videos = 28112  # count_data_items(train_files)
-    print('Number of training videos:', num_training_videos)
-
-    train_steps = num_training_videos // batch_size
-    print('Training steps: ', train_steps)
+    train_steps, val_steps = utils.get_steps(
+        train_files, eval_files, batch_size)
 
     logdir = "logs/scalars/" + datetime.now().strftime("%Y%m%d-%H%M%S")
     tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
 
     callbacks_list = [
-        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/lstm_efficientnet_fine/', monitor='accuracy',
+        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/lstm_efficientnet_fine_v2/', monitor='accuracy',
                         verbose=1, save_best_only=True, save_weights_only=True),
         LearningRateScheduler(lr_scheduler.lr_asc_desc_decay, verbose=1),
         tensorboard_callback
@@ -121,18 +116,24 @@ def train_cnn_lstm_model(train_files, epochs, batch_size, learning_rate, load_we
 
     if load_weights:
         recurrent_model.load_weights(
-            '/home/alvaro/Desktop/multi-cue-sign-language/src/models/lstm_efficientnet/')
+            '/home/alvaro/Desktop/multi-cue-sign-language/src/models/lstm_efficientnet_fine/')
 
     recurrent_model.fit(train_gen(dataset),
                         steps_per_epoch=train_steps,
                         epochs=epochs,
+                        validation_data=eval_gen(dataset_eval),
                         callbacks=callbacks_list)
 
 
 if __name__ == '__main__':
     train_files = tf.io.gfile.glob(
         '/home/alvaro/Desktop/video2tfrecord/example/train/*.tfrecords')
-    epochs = 50
+
+    eval_files = tf.io.gfile.glob(
+        '/home/alvaro/Desktop/video2tfrecord/example/validation/*.tfrecords')
+
+    epochs = 35
     batch_size = 14
     learning_rate = 0.00001
-    train_cnn_lstm_model(train_files, epochs, batch_size, learning_rate, True)
+    train_cnn_lstm_model(train_files, eval_files, epochs,
+                         batch_size, learning_rate, True)
