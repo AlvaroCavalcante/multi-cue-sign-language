@@ -30,11 +30,13 @@ def get_recurrent_model(learning_rate, cnn_model):
     frame_features_input.append(keras.Input((16, 13), name='triangle_data'))
 
     x = TimeDistributed(cnn_model)(frame_features_input)
-    x = keras.layers.LSTM(256, return_sequences=True)(x)
     x = keras.layers.LSTM(128, return_sequences=True)(x)
-    x = keras.layers.LSTM(128)(x)
-    x = keras.layers.Dropout(0.25)(x)
-    x = keras.layers.Dense(64, activation='relu')(x)
+    x = keras.layers.Dropout(0.15)(x)
+    x = keras.layers.LSTM(128, return_sequences=True)(x)
+    x = keras.layers.Dropout(0.15)(x)
+    x = keras.layers.LSTM(64)(x)
+    x = keras.layers.Dropout(0.1)(x)
+    x = keras.layers.Dense(64, activation='elu')(x)
     output = keras.layers.Dense(NUMBER_OF_CLASSES, activation='softmax')(x)
 
     rnn_model = keras.Model(frame_features_input, output)
@@ -105,9 +107,9 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
     tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
 
     callbacks_list = [
-        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/lstm_efficientnet_fine_v2/', monitor='accuracy',
+        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/regularized_efficientnet_lstm/', monitor='accuracy',
                         verbose=1, save_best_only=True, save_weights_only=True),
-        LearningRateScheduler(lr_scheduler.lr_asc_desc_decay, verbose=1),
+        LearningRateScheduler(lr_scheduler.lr_time_based_decay, verbose=1),
         tensorboard_callback
     ]
 
@@ -122,6 +124,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
                         steps_per_epoch=train_steps,
                         epochs=epochs,
                         validation_data=eval_gen(dataset_eval),
+                        validation_steps=val_steps,
                         callbacks=callbacks_list)
 
 
@@ -132,8 +135,8 @@ if __name__ == '__main__':
     eval_files = tf.io.gfile.glob(
         '/home/alvaro/Desktop/video2tfrecord/example/validation/*.tfrecords')
 
-    epochs = 35
+    epochs = 50
     batch_size = 14
-    learning_rate = 0.00001
+    learning_rate = 0.001
     train_cnn_lstm_model(train_files, eval_files, epochs,
-                         batch_size, learning_rate, True)
+                         batch_size, learning_rate, False)
