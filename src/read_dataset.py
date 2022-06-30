@@ -1,6 +1,8 @@
+import random
+
 import tensorflow as tf
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
-from data_augmentation import transform_batch
+from data_augmentation import transform_image
 
 
 def get_image(img, width, height):
@@ -12,6 +14,45 @@ def get_image(img, width, height):
     # image = tf.image.per_image_standardization(image)
     # image = preprocess_input(image)
     return image
+
+
+def get_apply_proba_dict():
+    apply_proba_dict = {}
+    aug_keys = ['brightness', 'contrast', 'saturation', 'hue',
+                'flip_left_right', 'rotation', 'shear', 'zoom', 'shift']
+
+    apply_proba_dict = {}
+
+    for key in aug_keys:
+        apply_proba_dict[key] = tf.random.uniform([], 0, 1.0, dtype=tf.float32)
+
+    return apply_proba_dict
+
+
+def get_range_aug_dict(img_width):
+    range_aug_dict = {}
+
+    rotation_range = [-20, 20]
+    shear_range = [5, 12]
+    h_zoom_range = [0.8, 1.2]
+    w_zoom_range = [0.8, 1.2]
+    h_shift_range = [0, 0.15]
+    w_shift_range = [0, 0.05]
+
+    range_aug_dict['rotation'] = tf.random.uniform([1], rotation_range[0],
+                                                   rotation_range[1], dtype=tf.float32)
+    range_aug_dict['shear'] = tf.random.uniform([1], shear_range[0],
+                                                shear_range[1], dtype=tf.float32)
+    range_aug_dict['height_zoom'] = tf.random.uniform(
+        [1], h_zoom_range[0], h_zoom_range[1], dtype=tf.float32)
+    range_aug_dict['width_zoom'] = tf.random.uniform(
+        [1], w_zoom_range[0], w_zoom_range[1], dtype=tf.float32)
+    range_aug_dict['height_shift'] = tf.random.uniform(
+        [1], h_shift_range[0], h_shift_range[1], dtype=tf.float32) * img_width
+    range_aug_dict['width_shift'] = tf.random.uniform(
+        [1], w_shift_range[0], w_shift_range[1], dtype=tf.float32) * img_width
+
+    return range_aug_dict
 
 
 def read_tfrecord_test(example_proto):
@@ -69,6 +110,10 @@ def read_tfrecord_train(example_proto):
     triangle_data = []
     centroids = []
 
+    apply_proba_dict = get_apply_proba_dict()
+    range_aug_dict = get_range_aug_dict(80)
+    seed = random.randint(0, 10000)
+
     for image_count in range(16):
         face_stream = 'face/' + str(image_count)
         hand_1_stream = 'hand_1/' + str(image_count)
@@ -108,8 +153,12 @@ def read_tfrecord_train(example_proto):
         hand_1_image = get_image(features[hand_1_stream], width, height)
         hand_2_image = get_image(features[hand_2_stream], width, height)
 
-        face_image, hand_1_image, hand_2_image = transform_batch(
-            face_image, hand_1_image, hand_2_image, 80)
+        face_image = transform_image(
+            face_image, width, apply_proba_dict, range_aug_dict, seed)
+        hand_1_image = transform_image(
+            hand_1_image, width, apply_proba_dict, range_aug_dict, seed, True)
+        hand_2_image = transform_image(
+            hand_2_image, width, apply_proba_dict, range_aug_dict, seed, True)
 
         face.append(face_image)
         hand_1.append(hand_1_image)

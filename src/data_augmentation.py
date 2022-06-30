@@ -25,7 +25,7 @@ def multiply_matrix(transformation, origin_matrix, identity_matrix):
     return K.dot(transformation, origin_matrix)
 
 
-def get_transform_matrix(rotation, shear, height_zoom, width_zoom, height_shift, width_shift, is_hand=False):
+def get_transform_matrix(apply_proba_dict, range_aug_dict, is_hand=False):
     one = tf.constant([1], dtype='float32')
     zero = tf.constant([0], dtype='float32')
     identity_matrix = tf.cast(tf.reshape(tf.concat(
@@ -33,36 +33,26 @@ def get_transform_matrix(rotation, shear, height_zoom, width_zoom, height_shift,
 
     transform_matrix = identity_matrix
 
-    if tf.random.uniform([], 0, 1.0, dtype=tf.float32) > 0.5:
-        rotation_matrix = get_rotation_matrix(rotation, zero, one)
+    if apply_proba_dict['rotation'] > 0.5:
+        rotation_matrix = get_rotation_matrix(
+            range_aug_dict['rotation'], zero, one)
         transform_matrix = multiply_matrix(
             transform_matrix, rotation_matrix, identity_matrix)
-    else:
-        rotation_matrix = identity_matrix
 
-    if tf.random.uniform([], 0, 1.0, dtype=tf.float32) > 0.5:
-        shear_matrix = get_shear_matrix(shear, zero, one)
+    if apply_proba_dict['shear'] > 0.5:
+        shear_matrix = get_shear_matrix(range_aug_dict['shear'], zero, one)
         transform_matrix = multiply_matrix(
             transform_matrix, shear_matrix, identity_matrix)
-    else:
-        shear_matrix = identity_matrix
 
-    if is_hand:
-        return transform_matrix
-
-    if tf.random.uniform([], 0, 1.0, dtype=tf.float32) > 0.5:
+    if apply_proba_dict['zoom'] > 0.5 and not is_hand:
         zoom_matrix = tf.reshape(tf.concat(
-            [one/height_zoom, zero, zero, zero, one/width_zoom, zero, zero, zero, one], axis=0), [3, 3])
+            [one/range_aug_dict['height_zoom'], zero, zero, zero, one/range_aug_dict['width_zoom'], zero, zero, zero, one], axis=0), [3, 3])
         transform_matrix = multiply_matrix(
             transform_matrix, zoom_matrix, identity_matrix)
-    else:
-        zoom_matrix = identity_matrix
 
-    if tf.random.uniform([], 0, 1.0, dtype=tf.float32) > 0.5:
+    if apply_proba_dict['shift'] > 0.5 and not is_hand:
         shift_matrix = tf.reshape(tf.concat(
-            [one, zero, height_shift, zero, one, width_shift, zero, zero, one], axis=0), [3, 3])
-    else:
-        shift_matrix = identity_matrix
+            [one, zero, range_aug_dict['height_shift'], zero, one, range_aug_dict['width_shift'], zero, zero, one], axis=0), [3, 3])
         transform_matrix = multiply_matrix(
             transform_matrix, shift_matrix, identity_matrix)
 
@@ -87,40 +77,22 @@ def apply_operation(image, transform_matrix, DIM, XDIM):
     return tf.reshape(d, [DIM, DIM, 3])
 
 
-def transform(image, img_width, is_hand=False):
+def transform_image(image, img_width, apply_proba_dict, range_aug_dict, seed, is_hand=False):
     DIM = img_width
     XDIM = DIM % 2
 
-    rotation_range = [-30, 30]
-    shear_range = [1, 10]
-    h_zoom_range = [0.8, 1.2]
-    w_zoom_range = [0.8, 1.2]
-    h_shift_range = [0, 0.15]
-    w_shift_range = [0, 0.05]
+    if apply_proba_dict.get('brightness') > 0.5:
+        image = tf.image.random_brightness(image, 0.20, seed=seed)
+    if apply_proba_dict.get('contrast') > 0.5:
+        image = tf.image.random_contrast(image, 0.7, 2, seed=seed)
+    if apply_proba_dict.get('saturation') > 0.5:
+        image = tf.image.random_saturation(image, 0.75, 1.25, seed=seed)
+    if apply_proba_dict.get('hue') > 0.5:
+        image = tf.image.random_hue(image, 0.1, seed=seed)
+    if apply_proba_dict.get('flip_left_right') > 0.5:
+        image = tf.image.random_flip_left_right(image, seed=seed)
 
-    rot = tf.random.uniform([1], rotation_range[0],
-                            rotation_range[1], dtype=tf.float32)
-    shr = tf.random.uniform([1], shear_range[0],
-                            shear_range[1], dtype=tf.float32)
-    h_zoom = tf.random.uniform(
-        [1], h_zoom_range[0], h_zoom_range[1], dtype=tf.float32)
-    w_zoom = tf.random.uniform(
-        [1], w_zoom_range[0], w_zoom_range[1], dtype=tf.float32)
-    h_shift = tf.random.uniform(
-        [1], h_shift_range[0], h_shift_range[1], dtype=tf.float32) * DIM
-    w_shift = tf.random.uniform(
-        [1], w_shift_range[0], w_shift_range[1], dtype=tf.float32) * DIM
+    transform_matrix = get_transform_matrix(apply_proba_dict, range_aug_dict, is_hand)
+    image = apply_operation(image, transform_matrix, DIM, XDIM)
 
-    transform_matrix = get_transform_matrix(
-        rot, shr, h_zoom, w_zoom, h_shift, w_shift, is_hand)
-    transformed_image = apply_operation(image, transform_matrix, DIM, XDIM)
-
-    return transformed_image
-
-
-def transform_batch(face, hand_1, hand_2, img_width):
-    face = transform(face, img_width)
-    hand_img_1 = transform(hand_1, img_width, True)
-    hand_img_2 = transform(hand_2, img_width, True)
-
-    return face, hand_img_1, hand_img_2
+    return image
