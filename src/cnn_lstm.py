@@ -129,10 +129,10 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
 
 if __name__ == '__main__':
     train_files = tf.io.gfile.glob(
-        '/home/alvaro/Desktop/video2tfrecord/example/train/*.tfrecords')
+        '/home/alvaro/Desktop/video2tfrecord/example/train_v2/*.tfrecords')
 
     eval_files = tf.io.gfile.glob(
-        '/home/alvaro/Desktop/video2tfrecord/example/validation/*.tfrecords')
+        '/home/alvaro/Desktop/video2tfrecord/example/validation_v2/*.tfrecords')
 
     epochs = 45
     batch_size = 20

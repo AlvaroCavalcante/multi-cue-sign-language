@@ -12,7 +12,7 @@ def get_image(img, width, height):
     # image = tf.reshape(image, [1, height, width, 3])
     # image = tf.cast(image, dtype='uint8')
     # image = tf.image.per_image_standardization(image)
-    # image = preprocess_input(image)
+    image = preprocess_input(image)
     return image
 
 
@@ -188,7 +188,7 @@ def prepare_data(ds, batch_size, train, shuffle_buffer_size=700):
 
     if train:
         ds = ds.repeat().shuffle(buffer_size=shuffle_buffer_size).batch(
-            batch_size).prefetch(tf.data.experimental.AUTOTUNE)
+            batch_size).prefetch(tf.data.AUTOTUNE)
     else:
         ds = ds.repeat().batch(
             batch_size)
