@@ -82,7 +82,7 @@ def read_tfrecord_test(example_proto):
             example_proto, features=feature_dict)
 
         triangle_data.append(tf.squeeze(tf.reshape(
-            features[triangle_stream].values, (1, 13))))
+            features[triangle_stream].values, (1, 11))))
 
         width = tf.cast(features['width'], tf.int32)
         height = tf.cast(features['height'], tf.int32)
@@ -98,7 +98,7 @@ def read_tfrecord_test(example_proto):
     video_name = features['video_name']
     label = tf.cast(features['label'], tf.int32)
 
-    return (hand_1, hand_2, face, triangle_data), label, video_name
+    return (hand_1, hand_2, triangle_data), label, video_name
 
 
 def read_tfrecord_train(example_proto):
@@ -140,7 +140,7 @@ def read_tfrecord_train(example_proto):
             example_proto, features=feature_dict)
 
         triangle_data.append(tf.squeeze(tf.reshape(
-            features[triangle_stream].values, (1, 13))))
+            features[triangle_stream].values, (1, 11))))
 
         centroids.append(tf.reshape(features[centroid_stream].values, (3, 2)))
 
@@ -166,7 +166,7 @@ def read_tfrecord_train(example_proto):
         video_name.append(features['video_name'])
         label = tf.cast(features['label'], tf.int32)
 
-    return [hand_1, hand_2], face, triangle_data, centroids, label, video_name, triangle_stream_arr
+    return [hand_1, hand_2], triangle_data, centroids, label, video_name, triangle_stream_arr
 
 
 def filter_func(hands, face, triangle_data, centroids, label, video_name, triangle_stream_arr):

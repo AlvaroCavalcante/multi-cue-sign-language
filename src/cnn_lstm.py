@@ -26,16 +26,16 @@ FACE_WIDTH, FACE_HEIGHT = 80, 80
 
 def get_recurrent_model(learning_rate, cnn_model):
     frame_features_input = [keras.Input(
-        (16, HAND_WIDTH, HAND_HEIGHT, 3), name="input"+str(c)) for c in range(3)]
-    frame_features_input.append(keras.Input((16, 13), name='triangle_data'))
+        (16, HAND_WIDTH, HAND_HEIGHT, 3), name="input"+str(c)) for c in range(2)]
+    frame_features_input.append(keras.Input((16, 11), name='triangle_data'))
 
     x = TimeDistributed(cnn_model)(frame_features_input)
+    x = keras.layers.LSTM(512, return_sequences=True)(x)
+    x = keras.layers.Dropout(0.1)(x)
     x = keras.layers.LSTM(256, return_sequences=True)(x)
     x = keras.layers.Dropout(0.1)(x)
-    x = keras.layers.LSTM(128, return_sequences=True)(x)
-    x = keras.layers.LSTM(64)(x)
-    x = keras.layers.Dropout(0.15)(x)
-    x = keras.layers.Dense(64, activation='elu')(x)
+    x = keras.layers.LSTM(128)(x)
+    # x = keras.layers.Dense(64, activation='elu')(x)
     output = keras.layers.Dense(NUMBER_OF_CLASSES, activation='softmax')(x)
 
     rnn_model = keras.Model(frame_features_input, output)
@@ -70,24 +70,24 @@ def get_cnn_model(fine_tune=False):
         shape=(HAND_WIDTH, HAND_HEIGHT, 3), name='hand2_input')
     face_input = tf.keras.layers.Input(
         shape=(FACE_WIDTH, FACE_HEIGHT, 3), name='face_input')
-    triangle_input = tf.keras.layers.Input(shape=(13), name='triangle_input')
+    triangle_input = tf.keras.layers.Input(shape=(11), name='triangle_input')
 
     hand_seq = get_hand_sequence(hand1_input, hand2_input, fine_tune)
-    face_seq = get_face_sequence(face_input, fine_tune)
+    # face_seq = get_face_sequence(face_input, fine_tune)
 
-    concat_layers = Concatenate()([hand_seq, face_seq])
-    final_output = Concatenate()([concat_layers, triangle_input])
+    # concat_layers = Concatenate()([hand_seq, face_seq])
+    final_output = Concatenate()([hand_seq, triangle_input])
 
     model = Model(inputs=[hand1_input, hand2_input,
-                  face_input, triangle_input], outputs=final_output)
+                  triangle_input], outputs=final_output)
     tf.keras.utils.plot_model(model, "model.png", show_shapes=True)
 
     return model
 
 
 def train_gen(dataset):
-    for (hand_seq, face_seq, triangle_data, centroids, label, video_name_list, triangle_stream) in dataset:
-        yield [hand_seq[:, 0], hand_seq[:, 1], face_seq, triangle_data], label
+    for (hand_seq, triangle_data, centroids, label, video_name_list, triangle_stream) in dataset:
+        yield [hand_seq[:, 0], hand_seq[:, 1], triangle_data], label
 
 
 def eval_gen(dataset):
@@ -102,7 +102,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
     train_steps, val_steps = utils.get_steps(
         train_files, eval_files, batch_size)
 
-    logdir = "logs/scalars/" + datetime.now().strftime("%Y%m%d-%H%M%S")
+    logdir = "src/logs/scalars/" + datetime.now().strftime("%Y%m%d-%H%M%S")
     tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
 
     callbacks_list = [
@@ -117,7 +117,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
 
     if load_weights:
         recurrent_model.load_weights(
-            '/home/alvaro/Desktop/multi-cue-sign-language/src/models/regularized_efficientnet_lstm/')
+            '/home/alvaro/Desktop/multi-cue-sign-language/src/models/mobilenet/')
 
     recurrent_model.fit(train_gen(dataset),
                         steps_per_epoch=train_steps,
@@ -129,12 +129,12 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
 
 if __name__ == '__main__':
     train_files = tf.io.gfile.glob(
-        '/home/alvaro/Desktop/video2tfrecord/example/train_v2/*.tfrecords')
+        '/home/alvaro/Desktop/video2tfrecord/example/train_norm/*.tfrecords')
 
     eval_files = tf.io.gfile.glob(
-        '/home/alvaro/Desktop/video2tfrecord/example/validation_v2/*.tfrecords')
+        '/home/alvaro/Desktop/video2tfrecord/example/val_norm/*.tfrecords')
 
-    epochs = 45
+    epochs = 50
     batch_size = 20
     learning_rate = 0.001
     train_cnn_lstm_model(train_files, eval_files, epochs,
