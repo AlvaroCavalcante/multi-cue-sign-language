@@ -10,6 +10,7 @@ from read_dataset import load_data_tfrecord
 from utils import utils
 from utils import lr_scheduler
 from utils import cnn_models
+from utils import rnn_models
 
 physical_devices = tf.config.list_physical_devices('GPU')
 try:
@@ -34,8 +35,9 @@ def get_recurrent_model(learning_rate, cnn_model):
     x = keras.layers.Dropout(0.1)(x)
     x = keras.layers.LSTM(256, return_sequences=True)(x)
     x = keras.layers.Dropout(0.1)(x)
-    x = keras.layers.LSTM(128)(x)
+    x = keras.layers.LSTM(128, return_sequences=True)(x)
     # x = keras.layers.Dense(64, activation='elu')(x)
+    x = rnn_models.Attention(return_sequences=False)(x)
     output = keras.layers.Dense(NUMBER_OF_CLASSES, activation='softmax')(x)
 
     rnn_model = keras.Model(frame_features_input, output)
@@ -134,7 +136,7 @@ if __name__ == '__main__':
     eval_files = tf.io.gfile.glob(
         '/home/alvaro/Desktop/video2tfrecord/example/val_norm/*.tfrecords')
 
-    epochs = 50
+    epochs = 40
     batch_size = 20
     learning_rate = 0.001
     train_cnn_lstm_model(train_files, eval_files, epochs,
