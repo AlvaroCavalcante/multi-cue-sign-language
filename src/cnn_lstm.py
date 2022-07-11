@@ -4,7 +4,7 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Concatenate, TimeDistributed
-from tensorflow.keras.callbacks import ModelCheckpoint, LearningRateScheduler
+from tensorflow.keras.callbacks import ModelCheckpoint, LearningRateScheduler, EarlyStopping
 from tensorflow.keras.layers import Bidirectional, LSTM, GRU, Dropout, Dense
 
 from read_dataset import load_data_tfrecord
@@ -108,10 +108,12 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
     logdir = "src/logs/scalars/" + datetime.now().strftime("%Y%m%d-%H%M%S")
     tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
 
+    early_stop = EarlyStopping(monitor="val_loss", patience=4)
+
     callbacks_list = [
-        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/mobilenet/', monitor='val_accuracy',
+        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/mobilenet_fine/', monitor='val_accuracy',
                         verbose=1, save_best_only=True, save_weights_only=True),
-        LearningRateScheduler(lr_scheduler.lr_time_based_decay, verbose=1),
+        LearningRateScheduler(lr_scheduler.lr_asc_desc_decay, verbose=1),
         tensorboard_callback
     ]
 
@@ -139,6 +141,6 @@ if __name__ == '__main__':
 
     epochs = 40
     batch_size = 20
-    learning_rate = 0.001
+    learning_rate = 0.00001
     train_cnn_lstm_model(train_files, eval_files, epochs,
-                         batch_size, learning_rate, False)
+                         batch_size, learning_rate, True)
