@@ -5,6 +5,7 @@ from tensorflow import keras
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Concatenate, TimeDistributed
 from tensorflow.keras.callbacks import ModelCheckpoint, LearningRateScheduler
+from tensorflow.keras.layers import Bidirectional, LSTM, GRU, Dropout, Dense
 
 from read_dataset import load_data_tfrecord
 from utils import utils
@@ -31,14 +32,14 @@ def get_recurrent_model(learning_rate, cnn_model):
     frame_features_input.append(keras.Input((16, 11), name='triangle_data'))
 
     x = TimeDistributed(cnn_model)(frame_features_input)
-    x = keras.layers.LSTM(512, return_sequences=True)(x)
-    x = keras.layers.Dropout(0.1)(x)
-    x = keras.layers.LSTM(256, return_sequences=True)(x)
-    x = keras.layers.Dropout(0.1)(x)
-    x = keras.layers.LSTM(128, return_sequences=True)(x)
-    # x = keras.layers.Dense(64, activation='elu')(x)
+    x = Bidirectional(GRU(512, return_sequences=True))(x)
+    x = Dropout(0.15)(x)
+    x = Bidirectional(GRU(256, return_sequences=True))(x)
+    x = Dropout(0.15)(x)
+    x = Bidirectional(GRU(128, return_sequences=True))(x)
+    # x = Dense(64, activation='elu')(x)
     x = rnn_models.Attention(return_sequences=False)(x)
-    output = keras.layers.Dense(NUMBER_OF_CLASSES, activation='softmax')(x)
+    output = Dense(NUMBER_OF_CLASSES, activation='softmax')(x)
 
     rnn_model = keras.Model(frame_features_input, output)
 
@@ -53,14 +54,14 @@ def get_recurrent_model(learning_rate, cnn_model):
 
 def get_hand_sequence(input_1, input_2, fine_tune):
     merged = Concatenate()([input_1, input_2])
-    cnn_model = cnn_models.get_mobilenet_model(
+    cnn_model = cnn_models.get_efficientnet_model(
         merged, prefix_name='hand', fine_tune=fine_tune)
 
     return cnn_model
 
 
 def get_face_sequence(face_input, fine_tune):
-    cnn_model = cnn_models.get_mobilenet_model(
+    cnn_model = cnn_models.get_efficientnet_model(
         face_input, prefix_name='face', fine_tune=fine_tune)
     return cnn_model
 

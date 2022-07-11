@@ -71,7 +71,7 @@ def get_mobilenet_model(input, prefix_name, fine_tune=False):
         layer._name = prefix_name + str(layer.name)
 
         if fine_tune:
-            if isinstance(layer, layers.BatchNormalization) or layer_n < 134: # 54 Layer 5 # 63 Layer 6
+            if isinstance(layer, layers.BatchNormalization) or layer_n < 143: # 54 Layer 5 # 63 Layer 6 # 107, #134 # 142
                 layer.trainable = False        
         else:
             layer.trainable = False
