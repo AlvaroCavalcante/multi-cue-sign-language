@@ -1,8 +1,9 @@
 import tensorflow as tf
 from tensorflow.keras.layers import Concatenate, Conv2D, MaxPooling2D, GlobalAveragePooling2D, TimeDistributed, add
-from tensorflow.keras.applications import EfficientNetB0, MobileNetV2
+from tensorflow.keras.applications import EfficientNetB0, MobileNetV2, EfficientNetV2S
 from tensorflow.keras import layers
 from utils import utils
+
 
 def get_toy_rnn(input):
     x = Conv2D(32, 3, activation="relu")(input)
@@ -40,15 +41,42 @@ def get_efficientnet_model(input, prefix_name, fine_tune=False):
     input_filter = tf.keras.layers.Conv2D(
         3, 3, padding='same', name=prefix_name+'_filter')(input)
 
-    base_model = EfficientNetB0( # EMA (Exponential Moving Average) is very helpful in training EfficientNet from scratch.
+    base_model = EfficientNetB0(  # EMA (Exponential Moving Average) is very helpful in training EfficientNet from scratch.
         weights='imagenet', pooling='avg', include_top=False)
 
     base_model._name = prefix_name + base_model._name
 
     for layer_n, layer in enumerate(base_model.layers):
-        layer._name = prefix_name + str(layer.name) # Each block needs to be all turned on or off.
+        # Each block needs to be all turned on or off.
+        layer._name = prefix_name + str(layer.name)
         if fine_tune:
-            if isinstance(layer, layers.BatchNormalization) or layer_n < 75: # 75 block 3 # 119 block 4 # 162 block 5 # 221 block 6
+            # 75 block 3 # 119 block 4 # 162 block 5 # 221 block 6
+            if isinstance(layer, layers.BatchNormalization) or layer_n < 75:
+                base_model.layers[layer_n].trainable = False
+        else:
+            layer.trainable = False
+
+    utils.get_param_count(base_model)
+
+    model = base_model(input_filter)
+    return model
+
+
+def get_efficientnet_v2_model(input, prefix_name, fine_tune=False):
+    input_filter = tf.keras.layers.Conv2D(
+        3, 3, padding='same', name=prefix_name+'_filter')(input)
+
+    base_model = EfficientNetV2S(
+        weights='imagenet', pooling='avg', include_top=False)
+
+    base_model._name = prefix_name + base_model._name
+
+    for layer_n, layer in enumerate(base_model.layers):
+        # Each block needs to be all turned on or off.
+        layer._name = prefix_name + str(layer.name)
+        if fine_tune:
+            # 267 # block 5
+            if isinstance(layer, layers.BatchNormalization) or layer_n < 322:
                 base_model.layers[layer_n].trainable = False
         else:
             layer.trainable = False
@@ -71,8 +99,9 @@ def get_mobilenet_model(input, prefix_name, fine_tune=False):
         layer._name = prefix_name + str(layer.name)
 
         if fine_tune:
-            if isinstance(layer, layers.BatchNormalization) or layer_n < 143: # 54 Layer 5 # 63 Layer 6 # 107, #134 # 142
-                layer.trainable = False        
+            # 54 Layer 5 # 63 Layer 6 # 107, #134 # 142
+            if isinstance(layer, layers.BatchNormalization) or layer_n < 143:
+                layer.trainable = False
         else:
             layer.trainable = False
 

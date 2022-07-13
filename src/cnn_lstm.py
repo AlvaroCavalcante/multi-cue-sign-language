@@ -33,10 +33,10 @@ def get_recurrent_model(learning_rate, cnn_model):
 
     x = TimeDistributed(cnn_model)(frame_features_input)
     x = Bidirectional(GRU(512, return_sequences=True))(x)
-    x = Dropout(0.15)(x)
+    x = Dropout(0.20)(x)
     x = Bidirectional(GRU(256, return_sequences=True))(x)
-    x = Dropout(0.15)(x)
-    x = Bidirectional(GRU(128, return_sequences=True))(x)
+    x = Dropout(0.20)(x)
+    x = Bidirectional(GRU(256, return_sequences=True))(x)
     # x = Dense(64, activation='elu')(x)
     x = rnn_models.Attention(return_sequences=False)(x)
     output = Dense(NUMBER_OF_CLASSES, activation='softmax')(x)
@@ -54,7 +54,7 @@ def get_recurrent_model(learning_rate, cnn_model):
 
 def get_hand_sequence(input_1, input_2, fine_tune):
     merged = Concatenate()([input_1, input_2])
-    cnn_model = cnn_models.get_efficientnet_model(
+    cnn_model = cnn_models.get_efficientnet_v2_model(
         merged, prefix_name='hand', fine_tune=fine_tune)
 
     return cnn_model
@@ -111,7 +111,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
     early_stop = EarlyStopping(monitor="val_loss", patience=4)
 
     callbacks_list = [
-        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/mobilenet_fine_v4/', monitor='val_accuracy',
+        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/efficientnetV2_fine/', monitor='val_accuracy',
                         verbose=1, save_best_only=True, save_weights_only=True),
         LearningRateScheduler(lr_scheduler.lr_time_based_decay, verbose=1),
         tensorboard_callback,
@@ -123,7 +123,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
 
     if load_weights:
         recurrent_model.load_weights(
-            '/home/alvaro/Desktop/multi-cue-sign-language/src/models/mobilenet_fine_v3/')
+            '/home/alvaro/Desktop/multi-cue-sign-language/src/models/efficientnetV2/')
 
     recurrent_model.fit(train_gen(dataset),
                         steps_per_epoch=train_steps,
@@ -140,8 +140,8 @@ if __name__ == '__main__':
     eval_files = tf.io.gfile.glob(
         '/home/alvaro/Desktop/video2tfrecord/example/val_norm/*.tfrecords')
 
-    epochs = 20
-    batch_size = 20
+    epochs = 30
+    batch_size = 8
     learning_rate = 0.00001
     train_cnn_lstm_model(train_files, eval_files, epochs,
                          batch_size, learning_rate, True)
