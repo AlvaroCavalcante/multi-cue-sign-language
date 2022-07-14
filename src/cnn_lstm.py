@@ -29,7 +29,7 @@ FACE_WIDTH, FACE_HEIGHT = 80, 80
 def get_recurrent_model(learning_rate, cnn_model):
     frame_features_input = [keras.Input(
         (16, HAND_WIDTH, HAND_HEIGHT, 3), name="input"+str(c)) for c in range(2)]
-    frame_features_input.append(keras.Input((16, 11), name='triangle_data'))
+    # frame_features_input.append(keras.Input((16, 11), name='triangle_data'))
 
     x = TimeDistributed(cnn_model)(frame_features_input)
     x = Bidirectional(GRU(512, return_sequences=True))(x)
@@ -39,9 +39,17 @@ def get_recurrent_model(learning_rate, cnn_model):
     x = Bidirectional(GRU(256, return_sequences=True))(x)
     # x = Dense(64, activation='elu')(x)
     x = rnn_models.Attention(return_sequences=False)(x)
-    output = Dense(NUMBER_OF_CLASSES, activation='softmax')(x)
 
-    rnn_model = keras.Model(frame_features_input, output)
+    tri_input = [keras.Input((16, 11), name='triangle_data')]
+    y = Bidirectional(GRU(128, return_sequences=True))(tri_input)
+    y = Dropout(0.20)(y)
+    y = Bidirectional(GRU(64, return_sequences=False))(y)
+
+    concat_layers = Concatenate()([x, y])
+
+    output = Dense(NUMBER_OF_CLASSES, activation='softmax')(concat_layers)
+
+    rnn_model = keras.Model([frame_features_input, tri_input], output)
 
     rnn_model.compile(
         loss='sparse_categorical_crossentropy', optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate), metrics=['accuracy']
@@ -54,7 +62,7 @@ def get_recurrent_model(learning_rate, cnn_model):
 
 def get_hand_sequence(input_1, input_2, fine_tune):
     merged = Concatenate()([input_1, input_2])
-    cnn_model = cnn_models.get_efficientnet_v2_model(
+    cnn_model = cnn_models.get_efficientnet_model(
         merged, prefix_name='hand', fine_tune=fine_tune)
 
     return cnn_model
@@ -79,10 +87,9 @@ def get_cnn_model(fine_tune=False):
     # face_seq = get_face_sequence(face_input, fine_tune)
 
     # concat_layers = Concatenate()([hand_seq, face_seq])
-    final_output = Concatenate()([hand_seq, triangle_input])
+    # final_output = Concatenate()([hand_seq, triangle_input])
 
-    model = Model(inputs=[hand1_input, hand2_input,
-                  triangle_input], outputs=final_output)
+    model = Model(inputs=[hand1_input, hand2_input], outputs=hand_seq)
     tf.keras.utils.plot_model(model, "model.png", show_shapes=True)
 
     return model
@@ -111,7 +118,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
     early_stop = EarlyStopping(monitor="val_loss", patience=4)
 
     callbacks_list = [
-        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/efficientnetV2_fine/', monitor='val_accuracy',
+        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/multi_lstm_fine/', monitor='val_accuracy',
                         verbose=1, save_best_only=True, save_weights_only=True),
         LearningRateScheduler(lr_scheduler.lr_time_based_decay, verbose=1),
         tensorboard_callback,
@@ -123,7 +130,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
 
     if load_weights:
         recurrent_model.load_weights(
-            '/home/alvaro/Desktop/multi-cue-sign-language/src/models/efficientnetV2/')
+            '/home/alvaro/Desktop/multi-cue-sign-language/src/models/multi_lstm/')
 
     recurrent_model.fit(train_gen(dataset),
                         steps_per_epoch=train_steps,
@@ -141,7 +148,7 @@ if __name__ == '__main__':
         '/home/alvaro/Desktop/video2tfrecord/example/val_norm/*.tfrecords')
 
     epochs = 30
-    batch_size = 8
+    batch_size = 20
     learning_rate = 0.00001
     train_cnn_lstm_model(train_files, eval_files, epochs,
                          batch_size, learning_rate, True)
