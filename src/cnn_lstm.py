@@ -47,7 +47,8 @@ def get_recurrent_model(learning_rate, cnn_model):
 
     concat_layers = Concatenate()([x, y])
 
-    output = Dense(NUMBER_OF_CLASSES, activation='softmax')(concat_layers)
+    dense = Dense(256, activation='elu')(concat_layers)
+    output = Dense(NUMBER_OF_CLASSES, activation='softmax')(dense)
 
     rnn_model = keras.Model([frame_features_input, tri_input], output)
 
@@ -118,7 +119,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
     early_stop = EarlyStopping(monitor="val_loss", patience=4)
 
     callbacks_list = [
-        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/multi_lstm_fine/', monitor='val_accuracy',
+        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/multi_lstm/', monitor='val_accuracy',
                         verbose=1, save_best_only=True, save_weights_only=True),
         LearningRateScheduler(lr_scheduler.lr_time_based_decay, verbose=1),
         tensorboard_callback,
@@ -149,6 +150,6 @@ if __name__ == '__main__':
 
     epochs = 30
     batch_size = 20
-    learning_rate = 0.00001
+    learning_rate = 0.001
     train_cnn_lstm_model(train_files, eval_files, epochs,
-                         batch_size, learning_rate, True)
+                         batch_size, learning_rate, False)
