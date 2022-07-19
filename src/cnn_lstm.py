@@ -29,28 +29,29 @@ FACE_WIDTH, FACE_HEIGHT = 80, 80
 def get_recurrent_model(learning_rate, cnn_model):
     frame_features_input = [keras.Input(
         (16, HAND_WIDTH, HAND_HEIGHT, 3), name="input"+str(c)) for c in range(2)]
-    # frame_features_input.append(keras.Input((16, 11), name='triangle_data'))
 
     x = TimeDistributed(cnn_model)(frame_features_input)
-    x = Bidirectional(GRU(512, return_sequences=True))(x)
-    x = Dropout(0.20)(x)
     x = Bidirectional(GRU(256, return_sequences=True))(x)
     x = Dropout(0.20)(x)
     x = Bidirectional(GRU(256, return_sequences=True))(x)
-    # x = Dense(64, activation='elu')(x)
+    x = Dropout(0.20)(x)
+    x = Bidirectional(GRU(256, return_sequences=True))(x)
     x = rnn_models.Attention(return_sequences=False)(x)
 
     tri_input = [keras.Input((16, 11), name='triangle_data')]
-    y = GRU(128, return_sequences=True)(tri_input)
+    y = Bidirectional(GRU(128, return_sequences=True))(tri_input)
     y = Dropout(0.20)(y)
-    y = GRU(64, return_sequences=False)(y)
+    y = Bidirectional(GRU(64, return_sequences=False))(y)
 
-    output1 = Dense(NUMBER_OF_CLASSES, activation='softmax')(y)
-    output2 = Dense(NUMBER_OF_CLASSES, activation='softmax')(x)
+    # output1 = Dense(NUMBER_OF_CLASSES, activation='softmax')(y)
+    # output2 = Dense(NUMBER_OF_CLASSES, activation='softmax')(x)
 
-    # concat_layers = Concatenate()([output1, output2])
+    concat_layers = Concatenate()([x, y])
 
-    output = tf.keras.layers.Average()([output1, output2])
+    # output = tf.keras.layers.Average()([output1, output1])
+
+    dense = Dense(256, activation='elu')(concat_layers)
+    output = Dense(NUMBER_OF_CLASSES, activation='softmax')(dense)
 
     rnn_model = keras.Model([frame_features_input, tri_input], output)
 
@@ -118,14 +119,14 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
     logdir = "src/logs/scalars/" + datetime.now().strftime("%Y%m%d-%H%M%S")
     tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
 
-    early_stop = EarlyStopping(monitor="val_loss", patience=4)
+    early_stop = EarlyStopping(monitor="val_loss", patience=5)
 
     callbacks_list = [
-        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/multi_lstm_avg/', monitor='val_accuracy',
+        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/cnn_lstm_triangle/', monitor='val_accuracy',
                         verbose=1, save_best_only=True, save_weights_only=True),
         LearningRateScheduler(lr_scheduler.lr_time_based_decay, verbose=1),
         tensorboard_callback,
-        early_stop
+        # early_stop
     ]
 
     cnn_model = get_cnn_model(load_weights)
@@ -133,7 +134,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
 
     if load_weights:
         recurrent_model.load_weights(
-            '/home/alvaro/Desktop/multi-cue-sign-language/src/models/multi_lstm_softmax/')
+            '/home/alvaro/Desktop/multi-cue-sign-language/src/models/cnn_lstm_fine_v3/').expect_partial()
 
     recurrent_model.fit(train_gen(dataset),
                         steps_per_epoch=train_steps,

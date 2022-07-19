@@ -41,7 +41,7 @@ def get_efficientnet_model(input, prefix_name, fine_tune=False):
     input_filter = tf.keras.layers.Conv2D(
         3, 3, padding='same', name=prefix_name+'_filter')(input)
 
-    base_model = EfficientNetB0(  # EMA (Exponential Moving Average) is very helpful in training EfficientNet from scratch.
+    base_model = EfficientNetB0(
         weights='imagenet', pooling='avg', include_top=False)
 
     base_model._name = prefix_name + base_model._name
@@ -51,7 +51,7 @@ def get_efficientnet_model(input, prefix_name, fine_tune=False):
         layer._name = prefix_name + str(layer.name)
         if fine_tune:
             # 75 block 3 # 119 block 4 # 162 block 5 # 221 block 6
-            if isinstance(layer, layers.BatchNormalization) or layer_n < 162:
+            if isinstance(layer, layers.BatchNormalization) or layer_n < 0:
                 base_model.layers[layer_n].trainable = False
         else:
             layer.trainable = False
