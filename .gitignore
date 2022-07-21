@@ -2,4 +2,5 @@
 *.pyc
 .vscode
 src/models
+tuner_results/
 logs

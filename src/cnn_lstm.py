@@ -12,6 +12,7 @@ from utils import utils
 from utils import lr_scheduler
 from utils import cnn_models
 from utils import rnn_models
+from utils import model_tuner
 
 physical_devices = tf.config.list_physical_devices('GPU')
 try:
@@ -109,7 +110,7 @@ def eval_gen(dataset):
         yield data, label
 
 
-def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_rate, load_weights=False):
+def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_rate, load_weights=False, tune_model=False):
     dataset = load_data_tfrecord(train_files, batch_size)
     dataset_eval = load_data_tfrecord(eval_files, batch_size, False)
 
@@ -119,7 +120,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
     logdir = "src/logs/scalars/" + datetime.now().strftime("%Y%m%d-%H%M%S")
     tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
 
-    early_stop = EarlyStopping(monitor="val_loss", patience=5)
+    early_stop = EarlyStopping(monitor="val_loss", patience=3)
 
     callbacks_list = [
         ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/cnn_lstm_triangle/', monitor='val_accuracy',
@@ -136,12 +137,21 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
         recurrent_model.load_weights(
             '/home/alvaro/Desktop/multi-cue-sign-language/src/models/cnn_lstm_fine_v3/').expect_partial()
 
-    recurrent_model.fit(train_gen(dataset),
-                        steps_per_epoch=train_steps,
-                        epochs=epochs,
-                        validation_data=eval_gen(dataset_eval),
-                        validation_steps=val_steps,
-                        callbacks=callbacks_list)
+    if tune_model:
+        tuner = model_tuner.get_tuner_instance()
+        tuner.search(x=train_gen(dataset),
+                     steps_per_epoch=train_steps,
+                     epochs=epochs,
+                     validation_data=eval_gen(dataset_eval),
+                     validation_steps=val_steps,
+                     callbacks=callbacks_list)
+    else:
+        recurrent_model.fit(train_gen(dataset),
+                            steps_per_epoch=train_steps,
+                            epochs=epochs,
+                            validation_data=eval_gen(dataset_eval),
+                            validation_steps=val_steps,
+                            callbacks=callbacks_list)
 
 
 if __name__ == '__main__':
