@@ -148,7 +148,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
                      callbacks=callbacks_list)
     else:
         print('Training model')
-        rnn_model.fit(train_gen(dataset),
+        recurrent_model.fit(train_gen(dataset),
                             steps_per_epoch=train_steps,
                             epochs=epochs,
                             validation_data=eval_gen(dataset_eval),
