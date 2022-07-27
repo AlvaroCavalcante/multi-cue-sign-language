@@ -37,115 +37,139 @@ def get_cnn_model(fine_tune=False):
     # final_output = Concatenate()([hand_seq, triangle_input])
 
     model = Model(inputs=[hand1_input, hand2_input], outputs=hand_seq)
-    tf.keras.utils.plot_model(model, "model.png", show_shapes=True)
 
     return model
 
 
 def triangle_model_builder(hp):
-    n_layers = hp.Int(name='n_layers', min_value=1, max_value=4, step=1)
-    rnn_type = hp.Choice(name='rnn_type', values=[
+    n_layers = hp.Int(name='triangle_n_layers',
+                      min_value=1, max_value=3, step=1)
+    rnn_type = hp.Choice(name='triangle_rnn_type', values=[
                          'lstm', 'gru'], ordered=False)
-    hp_units = hp.Int('units', min_value=32, max_value=256, step=64)
-    hp_units_2 = hp.Int('hp_units_2', min_value=32, max_value=256, step=64)
-    hp_units_3 = hp.Int('hp_units_3', min_value=32, max_value=256, step=64)
-    hp_units_4 = hp.Int('hp_units_4', min_value=32, max_value=256, step=64)
+
     dropout_rate = hp.Float(
-        name='dropout', min_value=0.1, max_value=0.5, step=0.05)
+        name='triangle_dropout', min_value=0.1, max_value=0.40, step=0.05)
+
+    bidirectional = hp.Boolean(name='triangle_bidirectional')
+    attention = hp.Boolean(name='triangle_attention')
 
     RNN = GRU if rnn_type == 'gru' else LSTM
 
     tri_input = [keras.Input((16, 11), name='triangle_data')]
 
-    return_seq = False if n_layers == 1 else True
-    y = RNN(hp_units, return_sequences=return_seq)(tri_input)
-    y = Dropout(dropout_rate)(y)
+    for layer in range(1, n_layers+1):
+        hp_units = hp.Int(f'triangle_hp_units_{layer}', min_value=32, max_value=256, step=64)
 
-    if n_layers >= 2:
-        return_seq = False if n_layers == 2 else True
+        return_seq = False if n_layers == layer and not attention else True
+        
+        if layer == 1:
+            y = add_rnn_layer(bidirectional, hp_units, return_seq, RNN, tri_input)
+        else:
+            y = add_rnn_layer(bidirectional, hp_units, return_seq, RNN, y)
 
-        y = RNN(hp_units_2, return_sequences=return_seq)(y)
-        y = Dropout(dropout_rate)(y)
-    if n_layers >= 3:
-        return_seq = False if n_layers == 3 else True
-        y = RNN(hp_units_3, return_sequences=return_seq)(y)
-        y = Dropout(dropout_rate)(y)
-    if n_layers >= 4:
-        y = RNN(hp_units_4, return_sequences=False)(y)
-        y = Dropout(dropout_rate)(y)
+        if layer in [1, 2]:
+            y = Dropout(dropout_rate)(y)
 
-    output = Dense(NUMBER_OF_CLASSES, activation='softmax')(y)
+    if attention:
+        y = rnn_models.Attention(return_sequences=False)(y)
 
-    rnn_model = keras.Model([tri_input], output)
-
-    rnn_model.compile(
-        loss='sparse_categorical_crossentropy', optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3), metrics=['accuracy']
-    )
-
-    return rnn_model
+    model = Model(inputs=[tri_input], outputs=y)
+    return model
 
 
-def rnn_cnn_model_builder(hp):
-    cnn_model = get_cnn_model(False)
-    n_layers = hp.Int(name='n_layers', min_value=1, max_value=4, step=1)
-
-    rnn_type = hp.Choice(name='rnn_type', values=[
-                         'lstm', 'gru'], ordered=False)
-
-    bidirectional = hp.Boolean(name='bidirectional')
-    attention = hp.Boolean(name='attention')
-
-    hp_units = hp.Int('units_1', min_value=32, max_value=512, step=64)
-    hp_units_2 = hp.Int('units_2', min_value=32, max_value=512, step=64)
-    hp_units_3 = hp.Int('units_3', min_value=32, max_value=512, step=64)
-    hp_units_4 = hp.Int('units_4', min_value=32, max_value=512, step=64)
-    RNN = GRU if rnn_type == 'gru' else LSTM
-
-    dropout_rate = hp.Float(
-        name='dropout_1', min_value=0.1, max_value=0.5, step=0.05)
-
-    frame_features_input = [keras.Input(
-        (16, 80, 80, 3), name="input"+str(c)) for c in range(2)]
-
-    y = TimeDistributed(cnn_model)(frame_features_input)
-
-    return_seq = False if n_layers == 1 and not attention else True
+def add_rnn_layer(bidirectional, hp_units, return_seq, RNN, y):
     if bidirectional:
         y = Bidirectional(RNN(hp_units, return_sequences=return_seq))(y)
     else:
         y = RNN(hp_units, return_sequences=return_seq)(y)
 
-    y = Dropout(dropout_rate)(y)
+    return y
 
-    if n_layers >= 2:
-        return_seq = False if n_layers == 2 and not attention else True
 
-        if bidirectional:
-            y = Bidirectional(RNN(hp_units_2, return_sequences=return_seq))(y)
-        else:
-            y = RNN(hp_units_2, return_sequences=return_seq)(y)
-        y = Dropout(dropout_rate)(y)
+def rnn_cnn_model_builder(hp):
+    n_layers = hp.Int(name='rnn_cnn_n_layers',
+                      min_value=1, max_value=4, step=1)
 
-    if n_layers >= 3:
-        return_seq = False if n_layers == 3 and not attention else True
-        if bidirectional:
-            y = Bidirectional(RNN(hp_units_3, return_sequences=return_seq))(y)
-        else:
-            y = RNN(hp_units_3, return_sequences=return_seq)(y)
-        y = Dropout(dropout_rate)(y)
-    if n_layers >= 4:
-        return_seq = False if not attention else True
-        if bidirectional:
-            y = Bidirectional(RNN(hp_units_4, return_sequences=return_seq))(y)
-        else:
-            y = RNN(hp_units_4, return_sequences=return_seq)(y)
+    rnn_type = hp.Choice(name='rnn_cnn_rnn_type', values=[
+                         'lstm', 'gru'], ordered=False)
+
+    bidirectional = hp.Boolean(name='rnn_cnn_bidirectional')
+    attention = hp.Boolean(name='rnn_cnn_attention')
+
+    RNN = GRU if rnn_type == 'gru' else LSTM
+
+    dropout_rate = hp.Float(
+        name='rnn_cnn_dropout_1', min_value=0.1, max_value=0.40, step=0.05)
+
+    frame_features_input = [keras.Input(
+        (16, 80, 80, 3), name="input"+str(c)) for c in range(2)]
+
+    cnn_model = get_cnn_model(False)
+    y = TimeDistributed(cnn_model)(frame_features_input)
+
+    for layer in range(1, n_layers+1):
+        hp_units = hp.Int(f'rnn_cnn_units_{layer}', min_value=32, max_value=512, step=64)
+
+        return_seq = False if n_layers == layer and not attention else True
+        y = add_rnn_layer(bidirectional, hp_units, return_seq, RNN, y)
+
+        if layer in [1, 2, 3]:
+            y = Dropout(dropout_rate)(y)
 
     if attention:
         y = rnn_models.Attention(return_sequences=False)(y)
 
-    output = Dense(NUMBER_OF_CLASSES, activation='softmax')(y)
+    model = Model(inputs=[frame_features_input], outputs=y)
+    return model
 
-    rnn_model = keras.Model([frame_features_input], output)
+
+def get_meta_learner(hp, concat_layers):
+    n_layers = hp.Int(name='join_n_layers', min_value=1, max_value=2, step=1)
+    hp_units = hp.Int('join_units_1', min_value=32, max_value=512, step=64)
+    hp_units_2 = hp.Int('join_units_2', min_value=32, max_value=512,
+                        step=64)
+
+    dropout_rate = hp.Float(
+        name='join_dropout_1', min_value=0.1, max_value=0.40, step=0.05)
+
+    dense = Dense(hp_units, activation='elu')(concat_layers)
+    dense = Dropout(dropout_rate)(dense)
+
+    with hp.conditional_scope("join_n_layers", [2]):
+        if n_layers >= 2:
+            dense = Dense(hp_units_2, activation='elu')(dense)
+
+    return dense
+
+
+def join_archtectures(hp, cnn_rnn_layer, triangle_rnn_layer):
+    join_type = hp.Choice(name='join_type', values=[
+        'multi_classifier', 'single_classifier', 'meta_learner'], ordered=False)
+
+    if join_type == 'multi_classifier':
+        output1 = Dense(NUMBER_OF_CLASSES, activation='softmax')(cnn_rnn_layer)
+        output2 = Dense(NUMBER_OF_CLASSES, activation='softmax')(
+            triangle_rnn_layer)
+        output = tf.keras.layers.Average()([output1, output2])
+    elif join_type == 'single_classifier':
+        concat_layers = Concatenate()([cnn_rnn_layer, triangle_rnn_layer])
+        output = Dense(NUMBER_OF_CLASSES, activation='softmax')(concat_layers)
+    else:
+        concat_layers = Concatenate()([cnn_rnn_layer, triangle_rnn_layer])
+        meta_learner = get_meta_learner(hp, concat_layers)
+        output = Dense(NUMBER_OF_CLASSES, activation='softmax')(meta_learner)
+
+    return output
+
+
+def model_builder(hp):
+    cnn_rnn_layer = rnn_cnn_model_builder(hp)
+    triangle_rnn_layer = triangle_model_builder(hp)
+    output = join_archtectures(
+        hp, cnn_rnn_layer.output, triangle_rnn_layer.output)
+
+    rnn_model = keras.Model(
+        [cnn_rnn_layer.input, triangle_rnn_layer.input], output)
 
     rnn_model.compile(
         loss='sparse_categorical_crossentropy', optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3), metrics=['accuracy']
@@ -155,7 +179,7 @@ def rnn_cnn_model_builder(hp):
 
 
 def get_tuner_instance():
-    tuner = kt.Hyperband(hypermodel=rnn_cnn_model_builder,
+    tuner = kt.Hyperband(hypermodel=model_builder,
                          objective=kt.Objective(
                              "val_accuracy", direction="max"),
                          max_epochs=15,
