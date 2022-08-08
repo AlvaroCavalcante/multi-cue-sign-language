@@ -32,29 +32,36 @@ def get_recurrent_model(learning_rate, cnn_model):
         (16, HAND_WIDTH, HAND_HEIGHT, 3), name="input"+str(c)) for c in range(2)]
 
     x = TimeDistributed(cnn_model)(frame_features_input)
-    x = Bidirectional(GRU(256, return_sequences=True))(x)
-    x = Dropout(0.20)(x)
-    x = Bidirectional(GRU(256, return_sequences=True))(x)
-    x = Dropout(0.20)(x)
-    x = Bidirectional(GRU(256, return_sequences=True))(x)
+    x = GRU(480, return_sequences=True)(x)
+    x = Dropout(0.35)(x)
+    x = GRU(288, return_sequences=True)(x)
+    x = Dropout(0.35)(x)
+    x = GRU(288, return_sequences=True)(x)
+    x = Dropout(0.35)(x)
     x = rnn_models.Attention(return_sequences=False)(x)
 
-    tri_input = [keras.Input((16, 11), name='triangle_data')]
-    y = Bidirectional(GRU(128, return_sequences=True))(tri_input)
-    y = Dropout(0.20)(y)
-    y = Bidirectional(GRU(64, return_sequences=False))(y)
+    # tri_input = [keras.Input((16, 11), name='triangle_data')]
+    # y = Bidirectional(LSTM(224, return_sequences=True))(tri_input)
+    # y = Dropout(0.20)(y)
+    # y = Bidirectional(LSTM(96, return_sequences=True))(y)
+    # y = Dropout(0.20)(y)
+    # y = Bidirectional(LSTM(224, return_sequences=True))(y)
+    # y = rnn_models.Attention(return_sequences=False)(y)
 
     # output1 = Dense(NUMBER_OF_CLASSES, activation='softmax')(y)
     # output2 = Dense(NUMBER_OF_CLASSES, activation='softmax')(x)
 
-    concat_layers = Concatenate()([x, y])
+    # concat_layers = Concatenate()([x, y])
 
     # output = tf.keras.layers.Average()([output1, output1])
 
-    dense = Dense(256, activation='elu')(concat_layers)
-    output = Dense(NUMBER_OF_CLASSES, activation='softmax')(dense)
+    # dense = Dense(256, activation='elu')(concat_layers)
+    # dense = Dense(288, activation='elu')(concat_layers)
+    # dense = Dropout(0.35)(dense)
+    # dense = Dense(416, activation='elu')(dense)
+    output = Dense(NUMBER_OF_CLASSES, activation='softmax')(x)
 
-    rnn_model = keras.Model([frame_features_input, tri_input], output)
+    rnn_model = keras.Model([frame_features_input], output)
 
     rnn_model.compile(
         loss='sparse_categorical_crossentropy', optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate), metrics=['accuracy']
@@ -123,11 +130,11 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
     early_stop = EarlyStopping(monitor="val_loss", patience=3)
 
     callbacks_list = [
-        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/cnn_lstm_tri_full_search/', monitor='val_accuracy',
+        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/cnn_lstm_v2_fine_6/', monitor='val_accuracy',
                         verbose=1, save_best_only=True, save_weights_only=True),
         LearningRateScheduler(lr_scheduler.lr_time_based_decay, verbose=1),
         tensorboard_callback,
-        early_stop
+        # early_stop
     ]
 
     if tune_model:
@@ -145,7 +152,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
 
         if load_weights:
             recurrent_model.load_weights(
-                '/home/alvaro/Desktop/multi-cue-sign-language/src/models/cnn_lstm_fine_v3/').expect_partial()
+                '/home/alvaro/Desktop/multi-cue-sign-language/src/models/cnn_lstm_v2_fine_5/').expect_partial()
 
         print('Training model')
         recurrent_model.fit(train_gen(dataset),
@@ -163,8 +170,8 @@ if __name__ == '__main__':
     eval_files = tf.io.gfile.glob(
         '/home/alvaro/Desktop/video2tfrecord/example/val_norm/*.tfrecords')
 
-    epochs = 20
-    batch_size = 20
-    learning_rate = 0.001
+    epochs = 50
+    batch_size = 30
+    learning_rate = 0.0001
     train_cnn_lstm_model(train_files, eval_files, epochs,
-                         batch_size, learning_rate, False, True)
+                         batch_size, learning_rate, True, False)
