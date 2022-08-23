@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tensorflow.keras.layers import Concatenate, Conv2D, MaxPooling2D, GlobalAveragePooling2D, TimeDistributed, add
-from tensorflow.keras.applications import EfficientNetB0, MobileNetV2, EfficientNetV2S
+from tensorflow.keras.applications import EfficientNetB0, MobileNetV2, EfficientNetV2S, Xception
 from tensorflow.keras import layers
 from utils import utils
 
@@ -38,9 +38,6 @@ def get_custom_cnn(input):
 
 
 def get_efficientnet_model(input, prefix_name, fine_tune=False):
-    input_filter = tf.keras.layers.Conv2D(
-        3, 3, padding='same', name=prefix_name+'_filter')(input)
-
     base_model = EfficientNetB0(
         weights='imagenet', pooling='avg', include_top=False)
 
@@ -51,7 +48,32 @@ def get_efficientnet_model(input, prefix_name, fine_tune=False):
         layer._name = prefix_name + str(layer.name)
         if fine_tune:
             # 75 block 3 # 119 block 4 # 162 block 5 # 221 block 6
-            if isinstance(layer, layers.BatchNormalization) or layer_n < 221:
+            if isinstance(layer, layers.BatchNormalization) or layer_n < 162:
+                base_model.layers[layer_n].trainable = False
+        else:
+            layer.trainable = False
+
+    utils.get_param_count(base_model)
+
+    model = base_model(input)
+    return model
+
+
+def get_xception_model(input, prefix_name, fine_tune=False):
+    input_filter = tf.keras.layers.Conv2D(
+        3, 3, padding='same', name=prefix_name+'_filter')(input)
+
+    base_model = Xception(
+        weights='imagenet', pooling='avg', include_top=False)
+
+    base_model._name = prefix_name + base_model._name
+
+    for layer_n, layer in enumerate(base_model.layers):
+        # Each block needs to be all turned on or off.
+        layer._name = prefix_name + str(layer.name)
+        if False:
+            # 75 block 3 # 119 block 4 # 162 block 5 # 221 block 6
+            if isinstance(layer, layers.BatchNormalization) or layer_n < 119:
                 base_model.layers[layer_n].trainable = False
         else:
             layer.trainable = False

@@ -1,7 +1,8 @@
 import random
 
 import tensorflow as tf
-from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
+# from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
+from tensorflow.keras.applications.xception import preprocess_input
 from data_augmentation import transform_image
 
 
@@ -98,7 +99,7 @@ def read_tfrecord_test(example_proto):
     video_name = features['video_name']
     label = tf.cast(features['label'], tf.int32)
 
-    return (hand_1, hand_2, triangle_data), label, video_name
+    return (face, hand_1, hand_2, triangle_data), label, video_name
 
 
 def read_tfrecord_train(example_proto):
@@ -166,7 +167,7 @@ def read_tfrecord_train(example_proto):
         video_name.append(features['video_name'])
         label = tf.cast(features['label'], tf.int32)
 
-    return [hand_1, hand_2], triangle_data, centroids, label, video_name, triangle_stream_arr
+    return [hand_1, hand_2], face, triangle_data, centroids, label, video_name, triangle_stream_arr
 
 
 def filter_func(hands, face, triangle_data, centroids, label, video_name, triangle_stream_arr):
