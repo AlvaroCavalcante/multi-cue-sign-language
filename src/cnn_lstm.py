@@ -97,13 +97,11 @@ def get_cnn_model(fine_tune=False):
         shape=(HAND_WIDTH, HAND_HEIGHT, 3), name='hand2_input')
     # face_input = tf.keras.layers.Input(
     #     shape=(FACE_WIDTH, FACE_HEIGHT, 3), name='face_input')
-    triangle_input = tf.keras.layers.Input(shape=(11), name='triangle_input')
 
     hand_seq = get_hand_sequence(hand1_input, hand2_input, fine_tune)
     # face_seq = get_face_sequence(face_input, fine_tune)
 
     # concat_layers = Concatenate()([hand_seq, face_seq])
-    # final_output = Concatenate()([hand_seq, triangle_input])
 
     model = Model(inputs=[hand1_input, hand2_input], outputs=hand_seq)
     tf.keras.utils.plot_model(model, "model.png", show_shapes=True)
@@ -134,9 +132,9 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
     early_stop = EarlyStopping(monitor="val_loss", patience=3)
 
     callbacks_list = [
-        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/new_triangle_data/', monitor='val_accuracy',
+        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/tunned_model/', monitor='val_accuracy',
                         verbose=1, save_best_only=True, save_weights_only=True),
-        LearningRateScheduler(lr_scheduler.lr_time_based_decay, verbose=1),
+        # LearningRateScheduler(lr_scheduler.lr_time_based_decay, verbose=1),
         tensorboard_callback,
         # early_stop
     ]
@@ -178,4 +176,4 @@ if __name__ == '__main__':
     batch_size = 30
     learning_rate = 0.0001
     train_cnn_lstm_model(train_files, eval_files, epochs,
-                         batch_size, learning_rate, False, False)
+                         batch_size, learning_rate, False, True)
