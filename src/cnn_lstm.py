@@ -46,20 +46,26 @@ def get_recurrent_model(learning_rate, cnn_model):
     y = GRU(96, return_sequences=True)(y)
     y = rnn_models.Attention(return_sequences=False)(y)
 
+    face_input = [keras.Input((16, 138), name='face_input')]
+    z = GRU(448, return_sequences=True)(face_input)
+    z = Dropout(0.15)(z)
+    z = GRU(224, return_sequences=True)(z)
+    z = Dropout(0.15)(z)
+    z = rnn_models.Attention(return_sequences=False)(z)
+
     # output1 = Dense(NUMBER_OF_CLASSES, activation='softmax')(y)
     # output2 = Dense(NUMBER_OF_CLASSES, activation='softmax')(x)
 
-    concat_layers = Concatenate()([x, y])
+    concat_layers = Concatenate()([x, y, z])
 
     # output = tf.keras.layers.Average()([output1, output1])
 
-    # dense = Dense(256, activation='elu')(concat_layers)
-    # dense = Dense(288, activation='elu')(concat_layers)
-    # dense = Dropout(0.35)(dense)
-    dense = Dense(224, activation='elu')(concat_layers)
+    dense = Dense(512, activation='elu')(concat_layers)
+    dense = Dropout(0.15)(dense)
+    dense = Dense(256, activation='elu')(dense)
     output = Dense(NUMBER_OF_CLASSES, activation='softmax')(dense)
 
-    rnn_model = keras.Model([frame_features_input, tri_input], output)
+    rnn_model = keras.Model([frame_features_input, tri_input, face_input], output)
 
     rnn_model.compile(
         loss='sparse_categorical_crossentropy', optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate), metrics=['accuracy']
@@ -106,12 +112,12 @@ def get_cnn_model(fine_tune=False):
 
 
 def train_gen(dataset):
-    for (hand_1, hand_2, triangle_data, label) in dataset:
-        yield [hand_1, hand_2, triangle_data], label
+    for (hand_1, hand_2, triangle_data, face_keypoints, label) in dataset:
+        yield [hand_1, hand_2, triangle_data, face_keypoints], label
 
 
 def eval_gen(dataset):
-    for (data, label, video_name) in dataset:
+    for (data, label) in dataset:
         yield data, label
 
 
@@ -168,7 +174,7 @@ if __name__ == '__main__':
     eval_files = tf.io.gfile.glob(
         '/home/alvaro/Desktop/video2tfrecord/example/val_v2_edited/*.tfrecords')
 
-    epochs = 50
+    epochs = 25
     batch_size = 30
     learning_rate = 0.0001
     train_cnn_lstm_model(train_files, eval_files, epochs,
