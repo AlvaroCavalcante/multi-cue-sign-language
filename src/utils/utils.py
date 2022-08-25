@@ -23,10 +23,10 @@ def count_data_items(tfrecord):
 
 
 def get_steps(train_files, eval_files, batch_size):
-    num_training_videos = 27500 # count_data_items(train_files) # 28112 # 27500
+    num_training_videos = 27729 # count_data_items(train_files) # 28142, 27729 total number of videos vs actual number.
     print('Number of training videos:', num_training_videos)
 
-    num_val_videos = 4015 # count_data_items(eval_files) # 4030 # 4015
+    num_val_videos = 4339 # count_data_items(eval_files) # 4418, 4339 
     print('Number of validation videos:', num_val_videos)
 
     train_steps = num_training_videos // batch_size

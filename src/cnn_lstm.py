@@ -23,8 +23,8 @@ except:
 
 MAX_SEQ_LENGTH = 16
 NUMBER_OF_CLASSES = 226
-HAND_WIDTH, HAND_HEIGHT = 80, 80
-FACE_WIDTH, FACE_HEIGHT = 80, 80
+HAND_WIDTH, HAND_HEIGHT = 100, 100
+FACE_WIDTH, FACE_HEIGHT = 100, 100
 
 
 def get_recurrent_model(learning_rate, cnn_model):
@@ -40,28 +40,26 @@ def get_recurrent_model(learning_rate, cnn_model):
     x = Dropout(0.35)(x)
     x = rnn_models.Attention(return_sequences=False)(x)
 
-    # tri_input = [keras.Input((16, 11), name='triangle_data')]
-    # y = Bidirectional(LSTM(224, return_sequences=True))(tri_input)
-    # y = Dropout(0.20)(y)
-    # y = Bidirectional(LSTM(96, return_sequences=True))(y)
-    # y = Dropout(0.20)(y)
-    # y = Bidirectional(LSTM(224, return_sequences=True))(y)
-    # y = rnn_models.Attention(return_sequences=False)(y)
+    tri_input = [keras.Input((16, 13), name='triangle_data')]
+    y = GRU(224, return_sequences=True)(tri_input)
+    y = Dropout(0.20)(y)
+    y = GRU(96, return_sequences=True)(y)
+    y = rnn_models.Attention(return_sequences=False)(y)
 
     # output1 = Dense(NUMBER_OF_CLASSES, activation='softmax')(y)
     # output2 = Dense(NUMBER_OF_CLASSES, activation='softmax')(x)
 
-    # concat_layers = Concatenate()([x, y])
+    concat_layers = Concatenate()([x, y])
 
     # output = tf.keras.layers.Average()([output1, output1])
 
     # dense = Dense(256, activation='elu')(concat_layers)
     # dense = Dense(288, activation='elu')(concat_layers)
     # dense = Dropout(0.35)(dense)
-    # dense = Dense(416, activation='elu')(dense)
-    output = Dense(NUMBER_OF_CLASSES, activation='softmax')(x)
+    dense = Dense(224, activation='elu')(concat_layers)
+    output = Dense(NUMBER_OF_CLASSES, activation='softmax')(dense)
 
-    rnn_model = keras.Model([frame_features_input], output)
+    rnn_model = keras.Model([frame_features_input, tri_input], output)
 
     rnn_model.compile(
         loss='sparse_categorical_crossentropy', optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate), metrics=['accuracy']
@@ -91,8 +89,8 @@ def get_cnn_model(fine_tune=False):
         shape=(HAND_WIDTH, HAND_HEIGHT, 3), name='hand1_input')
     hand2_input = tf.keras.layers.Input(
         shape=(HAND_WIDTH, HAND_HEIGHT, 3), name='hand2_input')
-    face_input = tf.keras.layers.Input(
-        shape=(FACE_WIDTH, FACE_HEIGHT, 3), name='face_input')
+    # face_input = tf.keras.layers.Input(
+    #     shape=(FACE_WIDTH, FACE_HEIGHT, 3), name='face_input')
     triangle_input = tf.keras.layers.Input(shape=(11), name='triangle_input')
 
     hand_seq = get_hand_sequence(hand1_input, hand2_input, fine_tune)
@@ -108,8 +106,8 @@ def get_cnn_model(fine_tune=False):
 
 
 def train_gen(dataset):
-    for (hand_seq, triangle_data, centroids, label, video_name_list, triangle_stream) in dataset:
-        yield [hand_seq[:, 0], hand_seq[:, 1], triangle_data], label
+    for (hand_1, hand_2, triangle_data, label) in dataset:
+        yield [hand_1, hand_2, triangle_data], label
 
 
 def eval_gen(dataset):
@@ -130,7 +128,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
     early_stop = EarlyStopping(monitor="val_loss", patience=3)
 
     callbacks_list = [
-        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/cnn_lstm_v2_fine_6/', monitor='val_accuracy',
+        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/new_triangle_data/', monitor='val_accuracy',
                         verbose=1, save_best_only=True, save_weights_only=True),
         LearningRateScheduler(lr_scheduler.lr_time_based_decay, verbose=1),
         tensorboard_callback,
@@ -165,13 +163,13 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
 
 if __name__ == '__main__':
     train_files = tf.io.gfile.glob(
-        '/home/alvaro/Desktop/video2tfrecord/example/train_norm/*.tfrecords')
+        '/home/alvaro/Desktop/video2tfrecord/example/train_v2_edited/*.tfrecords')
 
     eval_files = tf.io.gfile.glob(
-        '/home/alvaro/Desktop/video2tfrecord/example/val_norm/*.tfrecords')
+        '/home/alvaro/Desktop/video2tfrecord/example/val_v2_edited/*.tfrecords')
 
     epochs = 50
     batch_size = 30
     learning_rate = 0.0001
     train_cnn_lstm_model(train_files, eval_files, epochs,
-                         batch_size, learning_rate, True, False)
+                         batch_size, learning_rate, False, False)
