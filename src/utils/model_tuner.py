@@ -1,4 +1,5 @@
-import uuid
+import os
+import time
 
 import keras_tuner as kt
 import tensorflow as tf
@@ -11,27 +12,25 @@ from utils import cnn_models
 from utils import rnn_models
 
 NUMBER_OF_CLASSES = 226
-HAND_WIDTH, HAND_HEIGHT = 100, 100
+HAND_WIDTH, HAND_HEIGHT = 100, 200
 FACE_WIDTH, FACE_HEIGHT = 100, 100
 
 
-def get_hand_sequence(input_1, input_2, fine_tune):
-    merged = Concatenate()([input_1, input_2])
+def get_hand_sequence(hand_input, fine_tune):
+    # merged = Concatenate()([input_1, input_2])
     cnn_model = cnn_models.get_efficientnet_model(
-        merged, prefix_name='hand', fine_tune=fine_tune)
+        hand_input, prefix_name='hand', fine_tune=fine_tune)
 
     return cnn_model
 
 
 def get_cnn_model(fine_tune=False):
-    hand1_input = tf.keras.layers.Input(
-        shape=(HAND_WIDTH, HAND_HEIGHT, 3), name='hand1_input')
-    hand2_input = tf.keras.layers.Input(
-        shape=(HAND_WIDTH, HAND_HEIGHT, 3), name='hand2_input')
+    hand_input = tf.keras.layers.Input(
+        shape=(HAND_WIDTH, HAND_HEIGHT, 3), name='hand_input')
 
-    hand_seq = get_hand_sequence(hand1_input, hand2_input, fine_tune)
+    hand_seq = get_hand_sequence(hand_input, fine_tune)
 
-    model = Model(inputs=[hand1_input, hand2_input], outputs=hand_seq)
+    model = Model(inputs=[hand_input], outputs=hand_seq)
     return model
 
 
@@ -136,7 +135,7 @@ def rnn_cnn_model_builder(hp):
         name='rnn_cnn_dropout_1', min_value=0.05, max_value=0.40, step=0.05)
 
     frame_features_input = [keras.Input(
-        (16, 100, 100, 3), name="input"+str(c)) for c in range(2)]
+        (16, 100, 200, 3), name="input"+str(c)) for c in range(1)]
 
     cnn_model = get_cnn_model(False)
     y = TimeDistributed(cnn_model)(frame_features_input)
@@ -160,7 +159,8 @@ def rnn_cnn_model_builder(hp):
 
 def get_meta_learner(hp, concat_layers):
     with hp.conditional_scope("join_type", ['meta_learner']):
-        n_layers = hp.Int(name='join_n_layers', min_value=1, max_value=2, step=1)
+        n_layers = hp.Int(name='join_n_layers',
+                          min_value=1, max_value=2, step=1)
         hp_units = hp.Int('join_units_1', min_value=32, max_value=512, step=64)
 
         dropout_rate = hp.Float(
@@ -172,7 +172,7 @@ def get_meta_learner(hp, concat_layers):
         with hp.conditional_scope("join_n_layers", [2]):
             if n_layers >= 2:
                 hp_units_2 = hp.Int('join_units_2', min_value=32, max_value=512,
-                    step=64)
+                                    step=64)
                 dense = Dense(hp_units_2, activation='elu')(dense)
 
         return dense
@@ -183,16 +183,21 @@ def join_archtectures(hp, cnn_rnn_layer, triangle_rnn_layer, face_rnn_layer):
         'multi_classifier', 'single_classifier', 'meta_learner'], ordered=False)
 
     if join_type == 'multi_classifier':
-        classifier_1 = Dense(NUMBER_OF_CLASSES, activation='softmax')(cnn_rnn_layer)
+        classifier_1 = Dense(
+            NUMBER_OF_CLASSES, activation='softmax')(cnn_rnn_layer)
         classifier_2 = Dense(NUMBER_OF_CLASSES, activation='softmax')(
             triangle_rnn_layer)
-        classifier_3 = Dense(NUMBER_OF_CLASSES, activation='softmax')(face_rnn_layer)
-        output = tf.keras.layers.Average()([classifier_1, classifier_2, classifier_3])
+        classifier_3 = Dense(
+            NUMBER_OF_CLASSES, activation='softmax')(face_rnn_layer)
+        output = tf.keras.layers.Average()(
+            [classifier_1, classifier_2, classifier_3])
     elif join_type == 'single_classifier':
-        concat_layers = Concatenate()([cnn_rnn_layer, triangle_rnn_layer, face_rnn_layer])
+        concat_layers = Concatenate()(
+            [cnn_rnn_layer, triangle_rnn_layer, face_rnn_layer])
         output = Dense(NUMBER_OF_CLASSES, activation='softmax')(concat_layers)
     elif join_type == 'meta_learner':
-        concat_layers = Concatenate()([cnn_rnn_layer, triangle_rnn_layer, face_rnn_layer])
+        concat_layers = Concatenate()(
+            [cnn_rnn_layer, triangle_rnn_layer, face_rnn_layer])
         meta_learner = get_meta_learner(hp, concat_layers)
         output = Dense(NUMBER_OF_CLASSES, activation='softmax')(meta_learner)
 
@@ -214,7 +219,11 @@ def model_builder(hp):
         loss='sparse_categorical_crossentropy', optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3), metrics=['accuracy']
     )
 
-    tf.keras.utils.plot_model(rnn_model, f"model_{str(uuid.uuid4())}.png", show_shapes=True)
+    # len_trial = len(os.listdir('hyperband_tuner_cnn_lstm/plot_results'))
+
+    # tf.keras.utils.plot_model(
+    #     rnn_model, f'hyperband_tuner_cnn_lstm/plot_results/{str(len_trial)}_{str(time.time())}.png', show_shapes=True)
+
     return rnn_model
 
 

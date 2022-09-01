@@ -110,8 +110,8 @@ def get_cnn_model(fine_tune=False):
 
 
 def train_gen(dataset):
-    for (hand_1, hand_2, triangle_data, face_keypoints, label) in dataset:
-        yield [hand_1, hand_2, triangle_data, face_keypoints], label
+    for (hands, triangle_data, face_keypoints, label) in dataset:
+        yield [hands, triangle_data, face_keypoints], label
 
 
 def eval_gen(dataset):
@@ -132,7 +132,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
     early_stop = EarlyStopping(monitor="val_loss", patience=3)
 
     callbacks_list = [
-        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/tunned_model/', monitor='val_accuracy',
+        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/tunned_model_stacked/', monitor='val_accuracy',
                         verbose=1, save_best_only=True, save_weights_only=True),
         # LearningRateScheduler(lr_scheduler.lr_time_based_decay, verbose=1),
         tensorboard_callback,
@@ -142,6 +142,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
     if tune_model:
         print('Training model using keras tuner')
         tuner = model_tuner.get_tuner_instance()
+        # tuner.results_summary()
         tuner.search(x=train_gen(dataset),
                      steps_per_epoch=train_steps,
                      epochs=epochs,
@@ -173,7 +174,7 @@ if __name__ == '__main__':
         '/home/alvaro/Desktop/video2tfrecord/example/val_v2_edited/*.tfrecords')
 
     epochs = 25
-    batch_size = 30
+    batch_size = 20
     learning_rate = 0.0001
     train_cnn_lstm_model(train_files, eval_files, epochs,
                          batch_size, learning_rate, False, True)
