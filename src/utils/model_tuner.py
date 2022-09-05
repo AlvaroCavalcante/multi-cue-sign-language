@@ -219,11 +219,6 @@ def model_builder(hp):
         loss='sparse_categorical_crossentropy', optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3), metrics=['accuracy']
     )
 
-    # len_trial = len(os.listdir('hyperband_tuner_cnn_lstm/plot_results'))
-
-    # tf.keras.utils.plot_model(
-    #     rnn_model, f'hyperband_tuner_cnn_lstm/plot_results/{str(len_trial)}_{str(time.time())}.png', show_shapes=True)
-
     return rnn_model
 
 
@@ -232,7 +227,7 @@ def get_tuner_instance():
                          objective=kt.Objective(
                              "val_accuracy", direction="max"),
                          max_epochs=15,
-                         project_name='hyperband_tuner_cnn_lstm')
+                         project_name='tuner_results/hyperband_tuner_new_join_hands')
 
     print(tuner.search_space_summary())
 

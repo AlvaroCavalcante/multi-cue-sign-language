@@ -38,9 +38,6 @@ def get_custom_cnn(input):
 
 
 def get_efficientnet_model(input, prefix_name, fine_tune=False):
-    input_filter = tf.keras.layers.Conv2D(
-        3, 3, padding='same', name=prefix_name+'_filter')(input)
-
     base_model = EfficientNetB0(
         weights='imagenet', pooling='avg', include_top=False)
 
@@ -51,14 +48,14 @@ def get_efficientnet_model(input, prefix_name, fine_tune=False):
         layer._name = prefix_name + str(layer.name)
         if fine_tune:
             # 75 block 3 # 119 block 4 # 162 block 5 # 221 block 6
-            if isinstance(layer, layers.BatchNormalization) or layer_n < 162:
+            if isinstance(layer, layers.BatchNormalization) or layer_n < 221:
                 base_model.layers[layer_n].trainable = False
         else:
             layer.trainable = False
 
     utils.get_param_count(base_model)
 
-    model = base_model(input_filter)
+    model = base_model(input)
     return model
 
 
