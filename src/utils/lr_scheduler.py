@@ -18,8 +18,8 @@ def lr_step_decay(epoch, lr, nb_epoch=0):
 
 
 def lr_asc_desc_decay(epoch, lr, nb_epoch=0):
-    lr_max = 1e-4
-    lr_min = 1e-5
+    lr_max = 1e-3
+    lr_min = 1e-4
     lr_ascending_ep = 15
     lr_sus_ep = 0
     decay = 0.8

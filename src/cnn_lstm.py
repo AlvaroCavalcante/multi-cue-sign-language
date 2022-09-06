@@ -120,7 +120,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
     early_stop = EarlyStopping(monitor="val_loss", patience=3)
 
     callbacks_list = [
-        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/tunned_model_stacked_fine_v3/', monitor='val_accuracy',
+        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/tunned_model_stacked_fine_v4/', monitor='val_accuracy',
                         verbose=1, save_best_only=True, save_weights_only=True),
         LearningRateScheduler(lr_scheduler.lr_asc_desc_decay, verbose=1),
         tensorboard_callback,
@@ -144,7 +144,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
 
         if load_weights:
             recurrent_model.load_weights(
-                '/home/alvaro/Desktop/multi-cue-sign-language/src/models/tunned_model_stacked_fine_v2/').expect_partial()
+                '/home/alvaro/Desktop/multi-cue-sign-language/src/models/tunned_model_stacked_fine_v3/').expect_partial()
 
         print('Training model')
         recurrent_model.fit(train_gen(dataset),
