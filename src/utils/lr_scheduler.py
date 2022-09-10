@@ -20,7 +20,7 @@ def lr_step_decay(epoch, lr, nb_epoch=0):
 def lr_asc_desc_decay(epoch, lr, nb_epoch=0):
     lr_max = 1e-3
     lr_min = 1e-5
-    lr_ascending_ep = 25
+    lr_ascending_ep = 15
     lr_sus_ep = 0
     decay = 0.85
     ascending_penalty = 0.85
@@ -46,7 +46,7 @@ def plot_lr_decay(lr_function, lr, epoch, nb_epoch):
         return plot_lr_decay(lr_function, lr, epoch+1, nb_epoch)
 
 if __name__ == "__main__":
-    nb_epoch = 50
+    nb_epoch = 35
     returned_lr = plot_lr_decay(lr_asc_desc_decay, [1e-5], 0, nb_epoch)
     print(returned_lr)
 
