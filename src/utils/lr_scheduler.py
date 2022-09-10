@@ -46,7 +46,7 @@ def plot_lr_decay(lr_function, lr, epoch, nb_epoch):
         return plot_lr_decay(lr_function, lr, epoch+1, nb_epoch)
 
 if __name__ == "__main__":
-    nb_epoch = 35
+    nb_epoch = 30
     returned_lr = plot_lr_decay(lr_asc_desc_decay, [1e-5], 0, nb_epoch)
     print(returned_lr)
 
