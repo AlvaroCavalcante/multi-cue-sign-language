@@ -46,7 +46,7 @@ def get_recurrent_model(learning_rate, cnn_model):
     y = GRU(160, return_sequences=False)(y)
     y = Dropout(0.40)(y)
 
-    face_input = [keras.Input((16, 138), name='face_input')]
+    face_input = [keras.Input((16, 136), name='face_input')]
     z = LSTM(352, return_sequences=True)(face_input)
     z = Dropout(0.3)(z)
     z = rnn_models.Attention(return_sequences=False)(z)
