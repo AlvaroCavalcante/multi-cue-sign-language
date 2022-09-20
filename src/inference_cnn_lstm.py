@@ -16,14 +16,14 @@ if False:  # disable GPU if necessary
         assert device.device_type != 'GPU'
 
 files = tf.io.gfile.glob(
-    '/home/alvaro/Desktop/video2tfrecord/example/train/*.tfrecords')
+    '/home/alvaro/Desktop/video2tfrecord/example/val_v4/*.tfrecords')
 
-dataset = load_data_tfrecord(files, 24, False)
+dataset = load_data_tfrecord(files, 20, False)
 
 
-def eval_gen():
-    for (hand_seq, face_seq, triangle_data, centroids, label, video_name_list, triangle_stream) in dataset:
-        yield [hand_seq[:, 0], hand_seq[:, 1], face_seq, triangle_data], label
+def eval_gen(dataset):
+    for (data, label, video_names) in dataset:
+        yield data, label
 
 
 def show_confusion_matrix(y_true, pred):
@@ -38,12 +38,12 @@ cnn_model = cnn_lstm.get_cnn_model(False)
 recurrent_model = cnn_lstm.get_recurrent_model(0.0001, cnn_model)
 
 recurrent_model.load_weights(
-    '/home/alvaro/Desktop/multi-cue-sign-language/src/models/lstm_efficientnet_fine/')
+    '/home/alvaro/Desktop/multi-cue-sign-language/src/models/new_dataset_model_fine_v4/')
 
 class_vocab = pd.read_csv('./src/utils/class_id_correspondence.csv')
 
-# result = recurrent_model.evaluate(dataset)
-# true_categories = tf.concat([y for _, y, _ in dataset], axis=0)
+result = recurrent_model.evaluate(dataset, steps=4356//20) # number of data on val dataset by the batch size
+print(result)
 
 predictions = []
 video_names = []
@@ -61,6 +61,8 @@ for data, label, video_name in dataset:
 prediction_df = pd.DataFrame(
     {'predictions': predictions, 'video_names': video_names, 'correct_prediction': correct_prediction})
 prediction_df.to_csv('top3_predictions_lstm.csv', index=False)
+
+# true_categories = tf.concat([y for _, y, _ in dataset], axis=0)
 
 # predictions = recurrent_model.predict(dataset)
 # class_prediction = tf.argmax(predictions, axis=1)
