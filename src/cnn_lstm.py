@@ -66,7 +66,7 @@ def get_recurrent_model(learning_rate, cnn_model):
         [frame_features_input, tri_input, face_input], output)
 
     rnn_model.compile(
-        loss='sparse_categorical_crossentropy', optimizer=tf.keras.optimizers.SGD(learning_rate=learning_rate, momentum=0.9, nesterov=True), metrics=['accuracy'] # , momentum=0.9
+        loss='sparse_categorical_crossentropy', optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate), metrics=['accuracy'] # , momentum=0.9
     )
 
     print(rnn_model.summary())
@@ -122,7 +122,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
     callbacks_list = [
         ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/final_training/', monitor='val_accuracy',
                         verbose=1, save_best_only=True, save_weights_only=True),
-        LearningRateScheduler(lr_scheduler.lr_time_based_decay, verbose=1),
+        # LearningRateScheduler(lr_scheduler.lr_time_based_decay, verbose=1),
         tensorboard_callback,
         # early_stop
     ]
@@ -162,7 +162,7 @@ if __name__ == '__main__':
     eval_files = tf.io.gfile.glob(
         '/home/alvaro/Desktop/video2tfrecord/example/val_v5/*.tfrecords')
 
-    epochs = 100
+    epochs = 45
     batch_size = 30
     learning_rate = 1e-3
     train_cnn_lstm_model(train_files, eval_files, epochs,
