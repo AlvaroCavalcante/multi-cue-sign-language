@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tensorflow.keras.layers import Concatenate, Conv2D, MaxPooling2D, GlobalAveragePooling2D, TimeDistributed, add
-from tensorflow.keras.applications import EfficientNetB0, MobileNetV2, EfficientNetV2S, Xception
+from tensorflow.keras.applications import EfficientNetB0, MobileNetV2, EfficientNetV2B0, Xception
 from tensorflow.keras import layers
 from utils import utils
 
@@ -85,10 +85,7 @@ def get_xception_model(input, prefix_name, fine_tune=False):
 
 
 def get_efficientnet_v2_model(input, prefix_name, fine_tune=False):
-    input_filter = tf.keras.layers.Conv2D(
-        3, 3, padding='same', name=prefix_name+'_filter')(input)
-
-    base_model = EfficientNetV2S(
+    base_model = EfficientNetV2B0(
         weights='imagenet', pooling='avg', include_top=False)
 
     base_model._name = prefix_name + base_model._name
@@ -105,7 +102,7 @@ def get_efficientnet_v2_model(input, prefix_name, fine_tune=False):
 
     utils.get_param_count(base_model)
 
-    model = base_model(input_filter)
+    model = base_model(input)
     return model
 
 
