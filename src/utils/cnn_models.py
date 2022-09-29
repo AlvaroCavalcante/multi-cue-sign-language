@@ -95,7 +95,7 @@ def get_efficientnet_v2_model(input, prefix_name, fine_tune=False):
         layer._name = prefix_name + str(layer.name)
         if fine_tune:
             # 141 block 6  # 72 block 5
-            if isinstance(layer, layers.BatchNormalization) or layer_n < 141:
+            if isinstance(layer, layers.BatchNormalization) or layer_n < 72:
                 base_model.layers[layer_n].trainable = False
         else:
             layer.trainable = False

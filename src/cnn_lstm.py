@@ -121,7 +121,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
     early_stop = EarlyStopping(monitor="val_loss", patience=3)
 
     callbacks_list = [
-        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/final_training_fine_v1/', monitor='val_accuracy',
+        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/final_training_fine_v2/', monitor='val_accuracy',
                         verbose=1, save_best_only=True, save_weights_only=True),
         LearningRateScheduler(lr_scheduler.lr_asc_desc_decay, verbose=1),
         tensorboard_callback,
@@ -145,7 +145,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
 
         if load_weights:
             recurrent_model.load_weights(
-                '/home/alvaro/Desktop/multi-cue-sign-language/src/models/final_training/').expect_partial()
+                '/home/alvaro/Desktop/multi-cue-sign-language/src/models/final_training_fine_v1/').expect_partial()
 
         print('Training model')
         recurrent_model.fit(train_gen(dataset),
@@ -158,12 +158,12 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
 
 if __name__ == '__main__':
     train_files = tf.io.gfile.glob( 
-        '/home/alvaro/Desktop/video2tfrecord/example/train_v5/*.tfrecords')
+        '/home/alvaro/Desktop/video2tfrecord/results/train_v5/*.tfrecords')
 
     eval_files = tf.io.gfile.glob(
-        '/home/alvaro/Desktop/video2tfrecord/example/val_v5/*.tfrecords')
+        '/home/alvaro/Desktop/video2tfrecord/results/val_v5/*.tfrecords')
 
-    epochs = 60
+    epochs = 35
     batch_size = 30
     learning_rate = 1e-5
     train_cnn_lstm_model(train_files, eval_files, epochs,
