@@ -99,8 +99,8 @@ def get_cnn_model(fine_tune=False):
 
 
 def train_gen(dataset):
-    for (hands, triangle_data, face_keypoints, label) in dataset:
-        yield [hands, triangle_data, face_keypoints], label
+    for (data, label) in dataset:
+        yield data, label
 
 
 def eval_gen(dataset):
@@ -118,14 +118,12 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
     logdir = "src/logs/scalars/" + datetime.now().strftime("%Y%m%d-%H%M%S")
     tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
 
-    early_stop = EarlyStopping(monitor="val_loss", patience=3)
-
     callbacks_list = [
-        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/final_training_fine_v2/', monitor='val_accuracy',
+        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_hands/', monitor='val_accuracy',
                         verbose=1, save_best_only=True, save_weights_only=True),
-        LearningRateScheduler(lr_scheduler.lr_asc_desc_decay, verbose=1),
+        # LearningRateScheduler(lr_scheduler.lr_asc_desc_decay, verbose=1),
         tensorboard_callback,
-        # early_stop
+        # EarlyStopping(monitor="val_loss", patience=3)
     ]
 
     if tune_model:
@@ -145,7 +143,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
 
         if load_weights:
             recurrent_model.load_weights(
-                '/home/alvaro/Desktop/multi-cue-sign-language/src/models/final_training_fine_v1/').expect_partial()
+                '/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_hands/').expect_partial()
 
         print('Training model')
         recurrent_model.fit(train_gen(dataset),
@@ -163,8 +161,8 @@ if __name__ == '__main__':
     eval_files = tf.io.gfile.glob(
         '/home/alvaro/Desktop/video2tfrecord/results/val_v5/*.tfrecords')
 
-    epochs = 35
+    epochs = 50
     batch_size = 30
     learning_rate = 1e-5
     train_cnn_lstm_model(train_files, eval_files, epochs,
-                         batch_size, learning_rate, True, False)
+                         batch_size, learning_rate, False, True)
