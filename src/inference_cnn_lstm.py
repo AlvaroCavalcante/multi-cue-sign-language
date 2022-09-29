@@ -8,6 +8,7 @@ from sklearn.metrics import confusion_matrix
 
 from read_dataset import load_data_tfrecord
 import cnn_lstm
+from utils import utils
 
 if False:  # disable GPU if necessary
     tf.config.set_visible_devices([], 'GPU')
@@ -16,13 +17,15 @@ if False:  # disable GPU if necessary
         assert device.device_type != 'GPU'
 
 files = tf.io.gfile.glob(
-    '/home/alvaro/Desktop/video2tfrecord/example/val_v4/*.tfrecords')
+    '/home/alvaro/Desktop/video2tfrecord/results/test_v5/*.tfrecords')
+
+n_data = utils.count_data_items(files)
 
 dataset = load_data_tfrecord(files, 20, False)
 
 
 def eval_gen(dataset):
-    for (data, label, video_names) in dataset:
+    for (data, label) in dataset:
         yield data, label
 
 
@@ -38,11 +41,11 @@ cnn_model = cnn_lstm.get_cnn_model(False)
 recurrent_model = cnn_lstm.get_recurrent_model(0.0001, cnn_model)
 
 recurrent_model.load_weights(
-    '/home/alvaro/Desktop/multi-cue-sign-language/src/models/new_dataset_model_fine_v4/')
+    '/home/alvaro/Desktop/multi-cue-sign-language/src/models/final_training_fine_v2/').expect_partial()
 
 class_vocab = pd.read_csv('./src/utils/class_id_correspondence.csv')
 
-result = recurrent_model.evaluate(dataset, steps=4356//20) # number of data on val dataset by the batch size
+result = recurrent_model.evaluate(eval_gen(dataset), steps=n_data//20) # number of data on val dataset by the batch size
 print(result)
 
 predictions = []
