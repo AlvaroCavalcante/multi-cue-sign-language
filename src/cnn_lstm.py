@@ -32,38 +32,14 @@ def get_recurrent_model(learning_rate, cnn_model):
         (16, HAND_WIDTH, HAND_HEIGHT, 3), name="input"+str(c)) for c in range(1)]
 
     x = TimeDistributed(cnn_model)(frame_features_input)
-    x = Bidirectional(LSTM(224, return_sequences=True))(x)
-    x = Dropout(0.25)(x)
-    x = Bidirectional(LSTM(288, return_sequences=True))(x)
-    x = Dropout(0.25)(x)
-    x = Bidirectional(LSTM(96, return_sequences=True))(x)
+    x = Bidirectional(GRU(288, return_sequences=True))(x)
     x = Dropout(0.25)(x)
     x = rnn_models.Attention(return_sequences=False)(x)
 
-    tri_input = [keras.Input((16, 13), name='triangle_data')]
-    y = GRU(96, return_sequences=True)(tri_input)
-    y = Dropout(0.40)(y)
-    y = GRU(160, return_sequences=False)(y)
-    y = Dropout(0.40)(y)
-
-    face_input = [keras.Input((16, 136), name='face_input')]
-    z = LSTM(352, return_sequences=True)(face_input)
-    z = Dropout(0.3)(z)
-    z = rnn_models.Attention(return_sequences=False)(z)
-
-    # output1 = Dense(NUMBER_OF_CLASSES, activation='softmax')(y)
-    # output2 = Dense(NUMBER_OF_CLASSES, activation='softmax')(x)
-
-    concat_layers = Concatenate()([x, y, z])
-
-    # output = tf.keras.layers.Average()([output1, output1])
-
-    # dense = Dense(512, activation='elu')(concat_layers)
-
-    output = Dense(NUMBER_OF_CLASSES, activation='softmax')(concat_layers)
+    output = Dense(NUMBER_OF_CLASSES, activation='softmax')(x)
 
     rnn_model = keras.Model(
-        [frame_features_input, tri_input, face_input], output)
+        [frame_features_input], output)
 
     rnn_model.compile(
         loss='sparse_categorical_crossentropy', optimizer=tf.keras.optimizers.SGD(learning_rate=learning_rate, momentum=0.9), metrics=['accuracy'] # , momentum=0.9
@@ -74,8 +50,7 @@ def get_recurrent_model(learning_rate, cnn_model):
 
 
 def get_hand_sequence(hand_input, fine_tune):
-    # merged = Concatenate()([input_1, input_2])
-    cnn_model = cnn_models.get_efficientnet_v2_model(
+    cnn_model = cnn_models.get_efficientnet_model(
         hand_input, prefix_name='hand', fine_tune=fine_tune)
 
     return cnn_model
@@ -119,9 +94,9 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
     tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
 
     callbacks_list = [
-        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_hands/', monitor='val_accuracy',
+        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_hands_fine/', monitor='val_accuracy',
                         verbose=1, save_best_only=True, save_weights_only=True),
-        # LearningRateScheduler(lr_scheduler.lr_asc_desc_decay, verbose=1),
+        LearningRateScheduler(lr_scheduler.lr_asc_desc_decay, verbose=1),
         tensorboard_callback,
         # EarlyStopping(monitor="val_loss", patience=3)
     ]
@@ -174,6 +149,6 @@ if __name__ == '__main__':
 
     epochs = 40
     batch_size = 30
-    learning_rate = 1e-3
+    learning_rate = 1e-5
     train_cnn_lstm_model(train_files, eval_files, epochs,
-                         batch_size, learning_rate, False, False, True)
+                         batch_size, learning_rate, True, False, False)
