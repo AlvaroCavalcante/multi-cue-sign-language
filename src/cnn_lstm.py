@@ -108,7 +108,7 @@ def eval_gen(dataset):
         yield data, label
 
 
-def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_rate, load_weights=False, tune_model=False):
+def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_rate, load_weights=False, tune_model=False, train_tuned_model=False):
     dataset = load_data_tfrecord(train_files, batch_size)
     dataset_eval = load_data_tfrecord(eval_files, batch_size, False)
 
@@ -129,7 +129,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
     if tune_model:
         print('Training model using keras tuner')
         tuner = model_tuner.get_tuner_instance()
-        # tuner.results_summary()
+        tuner.results_summary()
         tuner.search(x=train_gen(dataset),
                      steps_per_epoch=train_steps,
                      epochs=epochs,
@@ -137,6 +137,17 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
                      validation_steps=val_steps,
                      callbacks=callbacks_list)
         # best_model = tuner.get_best_models()[0]
+    elif train_tuned_model:
+        tuner = model_tuner.get_tuner_instance()
+        best_hp = tuner.get_best_hyperparameters(num_trials=2)[1]
+        model = tuner.hypermodel.build(best_hp)
+        tf.keras.utils.plot_model(model, "model_plot.png", show_shapes=True)
+        model.fit(train_gen(dataset),
+                            steps_per_epoch=train_steps,
+                            epochs=epochs,
+                            validation_data=eval_gen(dataset_eval),
+                            validation_steps=val_steps,
+                            callbacks=callbacks_list)
     else:
         cnn_model = get_cnn_model(load_weights)
         recurrent_model = get_recurrent_model(learning_rate, cnn_model)
@@ -161,8 +172,8 @@ if __name__ == '__main__':
     eval_files = tf.io.gfile.glob(
         '/home/alvaro/Desktop/video2tfrecord/results/val_v5/*.tfrecords')
 
-    epochs = 50
+    epochs = 40
     batch_size = 30
-    learning_rate = 1e-5
+    learning_rate = 1e-3
     train_cnn_lstm_model(train_files, eval_files, epochs,
-                         batch_size, learning_rate, False, True)
+                         batch_size, learning_rate, False, False, True)
