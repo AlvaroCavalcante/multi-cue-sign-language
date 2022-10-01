@@ -17,7 +17,6 @@ FACE_WIDTH, FACE_HEIGHT = 100, 100
 
 
 def get_hand_sequence(hand_input, fine_tune):
-    # merged = Concatenate()([input_1, input_2])
     cnn_model = cnn_models.get_efficientnet_model(
         hand_input, prefix_name='hand', fine_tune=fine_tune)
 
@@ -206,14 +205,14 @@ def join_archtectures(hp, cnn_rnn_layer, triangle_rnn_layer, face_rnn_layer):
 
 def model_builder(hp):
     cnn_rnn_layer = rnn_cnn_model_builder(hp)
-    triangle_rnn_layer = triangle_model_builder(hp)
-    face_rnn_layer = face_model_builder(hp)
-
-    output = join_archtectures(
-        hp, cnn_rnn_layer.output, triangle_rnn_layer.output, face_rnn_layer.output)
+    # triangle_rnn_layer = triangle_model_builder(hp)
+    # face_rnn_layer = face_model_builder(hp)
+    output = Dense(NUMBER_OF_CLASSES, activation='softmax')(cnn_rnn_layer.output)
+    # output = join_archtectures(
+    #     hp, cnn_rnn_layer.output, triangle_rnn_layer.output, face_rnn_layer.output)
 
     rnn_model = keras.Model(
-        [cnn_rnn_layer.input, triangle_rnn_layer.input, face_rnn_layer.input], output)
+        [cnn_rnn_layer.input], output)
 
     rnn_model.compile(
         loss='sparse_categorical_crossentropy', optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3), metrics=['accuracy']
@@ -227,7 +226,7 @@ def get_tuner_instance():
                          objective=kt.Objective(
                              "val_accuracy", direction="max"),
                          max_epochs=15,
-                         project_name='tuner_results/hyperband_tuner_new_join_hands')
+                         project_name='tuner_results/step1_hands')
 
     print(tuner.search_space_summary())
 
