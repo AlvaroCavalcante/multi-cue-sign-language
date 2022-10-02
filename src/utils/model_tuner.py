@@ -89,7 +89,7 @@ def triangle_model_builder(hp):
 
     for layer in range(1, n_layers+1):
         hp_units = hp.Int(
-            f'triangle_hp_units_{layer}', min_value=32, max_value=320, step=64)
+            f'triangle_hp_units_{layer}', min_value=64, max_value=320, step=64)
 
         return_seq = False if n_layers == layer and not attention else True
 
@@ -204,15 +204,15 @@ def join_archtectures(hp, cnn_rnn_layer, triangle_rnn_layer, face_rnn_layer):
 
 
 def model_builder(hp):
-    cnn_rnn_layer = rnn_cnn_model_builder(hp)
-    # triangle_rnn_layer = triangle_model_builder(hp)
+    # cnn_rnn_layer = rnn_cnn_model_builder(hp)
+    triangle_rnn_layer = triangle_model_builder(hp)
     # face_rnn_layer = face_model_builder(hp)
-    output = Dense(NUMBER_OF_CLASSES, activation='softmax')(cnn_rnn_layer.output)
+    output = Dense(NUMBER_OF_CLASSES, activation='softmax')(triangle_rnn_layer.output)
     # output = join_archtectures(
     #     hp, cnn_rnn_layer.output, triangle_rnn_layer.output, face_rnn_layer.output)
 
     rnn_model = keras.Model(
-        [cnn_rnn_layer.input], output)
+        [triangle_rnn_layer.input], output)
 
     rnn_model.compile(
         loss='sparse_categorical_crossentropy', optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3), metrics=['accuracy']
@@ -226,7 +226,7 @@ def get_tuner_instance():
                          objective=kt.Objective(
                              "val_accuracy", direction="max"),
                          max_epochs=15,
-                         project_name='tuner_results/step1_hands')
+                         project_name='tuner_results/step1_triangle')
 
     print(tuner.search_space_summary())
 

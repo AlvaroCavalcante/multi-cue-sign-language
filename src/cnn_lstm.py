@@ -94,9 +94,9 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
     tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
 
     callbacks_list = [
-        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_hands_fine_v4/', monitor='val_accuracy',
+        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_triangle_tunning/', monitor='val_accuracy',
                         verbose=1, save_best_only=True, save_weights_only=True),
-        LearningRateScheduler(lr_scheduler.lr_asc_desc_decay, verbose=1),
+        # LearningRateScheduler(lr_scheduler.lr_asc_desc_decay, verbose=1),
         tensorboard_callback,
         # EarlyStopping(monitor="val_loss", patience=3)
     ]
@@ -114,7 +114,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
         # best_model = tuner.get_best_models()[0]
     elif train_tuned_model:
         tuner = model_tuner.get_tuner_instance()
-        best_hp = tuner.get_best_hyperparameters(num_trials=2)[1]
+        best_hp = tuner.get_best_hyperparameters(num_trials=1)[1]
         model = tuner.hypermodel.build(best_hp)
         tf.keras.utils.plot_model(model, "model_plot.png", show_shapes=True)
         model.fit(train_gen(dataset),
@@ -149,6 +149,6 @@ if __name__ == '__main__':
 
     epochs = 30
     batch_size = 30
-    learning_rate = 1e-5
+    learning_rate = 1e-3
     train_cnn_lstm_model(train_files, eval_files, epochs,
-                         batch_size, learning_rate, True, False, False)
+                         batch_size, learning_rate, False, True, False)
