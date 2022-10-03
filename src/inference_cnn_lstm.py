@@ -3,6 +3,7 @@ import time
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+from tqdm import tqdm
 
 from read_dataset import load_data_tfrecord
 import cnn_lstm
@@ -35,7 +36,7 @@ def run_model_inference(files, model_path, batch_size, evaluate=True, use_gpu=Tr
         print(accuracy)
 
     if eval_model_speed:
-        evaluate_model_speed(model, dataset)
+        evaluate_model_speed(model, dataset, n_data)
     else:
         run_inference_and_save_dataframe(dataset, model)
 
@@ -59,16 +60,23 @@ def run_inference_and_save_dataframe(dataset, model):
     prediction_df.to_csv('top3_predictions_lstm.csv', index=False)
 
 
-def evaluate_model_speed(model, dataset):
+def evaluate_model_speed(model, dataset, n_data):
     inference_times = []
 
-    for data, label in dataset:
-        start_inference_time = time.time()
-        model.predict(data)
-        inference_time = time.time() - start_inference_time
-        inference_times.append(inference_time)
+    with tqdm(total=n_data) as pbar:
+        for data, _ in dataset:
+            start_inference_time = time.time()
+            model.predict(data)
+            final_inference_time = time.time() - start_inference_time
+            inference_times.append(final_inference_time)
 
+            if len(inference_times) == n_data:
+                break
+            pbar.update(1)
+
+    inference_times.pop(0)
     print('Average inference time: ', np.mean(inference_times))
+    print('Inference std: ', np.std(inference_times))
 
 
 def get_model(model_path):
@@ -82,7 +90,7 @@ if __name__ == '__main__':
     files = tf.io.gfile.glob(
         '/home/alvaro/Desktop/video2tfrecord/results/test_v5/*.tfrecords')
 
-    model_path = '/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_hands_fine_v2/'
+    model_path = '/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_hands_fine_v4/'
 
     run_model_inference(files, model_path, batch_size=1,
                         evaluate=False, use_gpu=False, eval_model_speed=True)
