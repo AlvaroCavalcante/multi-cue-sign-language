@@ -44,7 +44,6 @@ def get_efficientnet_model(input, prefix_name, fine_tune=False):
     base_model._name = prefix_name + base_model._name
 
     for layer_n, layer in enumerate(base_model.layers):
-        # Each block needs to be all turned on or off.
         layer._name = prefix_name + str(layer.name)
         if fine_tune:
             # 75 block 3 # 119 block 4 # 162 block 5 # 221 block 6
