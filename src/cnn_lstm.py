@@ -46,7 +46,7 @@ def get_recurrent_model(learning_rate, cnn_model):
 
     rnn_model.compile(
         # , momentum=0.9
-        loss='sparse_categorical_crossentropy', optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate), metrics=['accuracy']
+        loss='sparse_categorical_crossentropy', optimizer=tf.keras.optimizers.SGD(learning_rate=learning_rate, momentum=0.9), metrics=['accuracy']
     )
 
     print(rnn_model.summary())
@@ -108,9 +108,9 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
     tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
 
     callbacks_list = [
-        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_face/', monitor='val_accuracy',
+        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_face_fine/', monitor='val_accuracy',
                         verbose=1, save_best_only=True, save_weights_only=True),
-        # LearningRateScheduler(lr_scheduler.lr_asc_desc_decay, verbose=1),
+        LearningRateScheduler(lr_scheduler.lr_asc_desc_decay, verbose=1),
         tensorboard_callback,
         # EarlyStopping(monitor="val_loss", patience=3)
     ]
@@ -141,7 +141,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
         cnn_model = get_face_cnn_model(load_weights)
         recurrent_model = get_recurrent_model(learning_rate, cnn_model)
 
-        if True:
+        if load_weights:
             recurrent_model.load_weights(
                 '/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_face/').expect_partial()
 
@@ -161,12 +161,12 @@ if __name__ == '__main__':
     eval_files = tf.io.gfile.glob(
         '/home/alvaro/Desktop/video2tfrecord/results/val_v5/*.tfrecords')
 
-    epochs = 10
+    epochs = 40
     batch_size = 30
-    learning_rate = 1e-3
+    learning_rate = 1e-5
     train_cnn_lstm_model(train_files, eval_files, epochs,
                          batch_size, learning_rate,
-                         load_weights=False,
+                         load_weights=True,
                          tune_model=False,
                          train_tuned_model=False
                          )
