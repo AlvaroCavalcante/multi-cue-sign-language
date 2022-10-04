@@ -29,11 +29,14 @@ FACE_WIDTH, FACE_HEIGHT = 100, 100
 
 def get_recurrent_model(learning_rate, cnn_model):
     frame_features_input = [keras.Input(
-        (16, HAND_WIDTH, HAND_HEIGHT, 3), name="input"+str(c)) for c in range(1)]
+        (16, FACE_WIDTH, FACE_HEIGHT, 3), name="input"+str(c)) for c in range(1)]
 
     x = TimeDistributed(cnn_model)(frame_features_input)
-    x = Bidirectional(GRU(288, return_sequences=True))(x)
-    x = Dropout(0.25)(x)
+    x = GRU(384, return_sequences=True)(x)
+    x = Dropout(0.05)(x)
+    x = GRU(320, return_sequences=True)(x)
+    x = Dropout(0.05)(x)
+    x = GRU(192, return_sequences=True)(x)
     x = rnn_models.Attention(return_sequences=False)(x)
 
     output = Dense(NUMBER_OF_CLASSES, activation='softmax')(x)
@@ -42,7 +45,8 @@ def get_recurrent_model(learning_rate, cnn_model):
         [frame_features_input], output)
 
     rnn_model.compile(
-        loss='sparse_categorical_crossentropy', optimizer=tf.keras.optimizers.SGD(learning_rate=learning_rate, momentum=0.9), metrics=['accuracy'] # , momentum=0.9
+        # , momentum=0.9
+        loss='sparse_categorical_crossentropy', optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate), metrics=['accuracy']
     )
 
     print(rnn_model.summary())
@@ -60,6 +64,16 @@ def get_face_sequence(face_input, fine_tune):
     cnn_model = cnn_models.get_efficientnet_model(
         face_input, prefix_name='face', fine_tune=fine_tune)
     return cnn_model
+
+
+def get_face_cnn_model(fine_tune=False):
+    face_input = tf.keras.layers.Input(
+        shape=(FACE_WIDTH, FACE_HEIGHT, 3), name='face_input')
+
+    face_seq = get_face_sequence(face_input, fine_tune)
+
+    model = Model(inputs=[face_input], outputs=face_seq)
+    return model
 
 
 def get_cnn_model(fine_tune=False):
@@ -94,7 +108,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
     tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
 
     callbacks_list = [
-        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_face_tunning/', monitor='val_accuracy',
+        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_face/', monitor='val_accuracy',
                         verbose=1, save_best_only=True, save_weights_only=True),
         # LearningRateScheduler(lr_scheduler.lr_asc_desc_decay, verbose=1),
         tensorboard_callback,
@@ -118,18 +132,18 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
         model = tuner.hypermodel.build(best_hp)
         tf.keras.utils.plot_model(model, "model_plot.png", show_shapes=True)
         model.fit(train_gen(dataset),
-                            steps_per_epoch=train_steps,
-                            epochs=epochs,
-                            validation_data=eval_gen(dataset_eval),
-                            validation_steps=val_steps,
-                            callbacks=callbacks_list)
+                  steps_per_epoch=train_steps,
+                  epochs=epochs,
+                  validation_data=eval_gen(dataset_eval),
+                  validation_steps=val_steps,
+                  callbacks=callbacks_list)
     else:
-        cnn_model = get_cnn_model(load_weights)
+        cnn_model = get_face_cnn_model(load_weights)
         recurrent_model = get_recurrent_model(learning_rate, cnn_model)
 
-        if load_weights:
+        if True:
             recurrent_model.load_weights(
-                '/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_hands_fine_v3/').expect_partial()
+                '/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_face/').expect_partial()
 
         print('Training model')
         recurrent_model.fit(train_gen(dataset),
@@ -141,14 +155,18 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
 
 
 if __name__ == '__main__':
-    train_files = tf.io.gfile.glob( 
+    train_files = tf.io.gfile.glob(
         '/home/alvaro/Desktop/video2tfrecord/results/train_v5/*.tfrecords')
 
     eval_files = tf.io.gfile.glob(
         '/home/alvaro/Desktop/video2tfrecord/results/val_v5/*.tfrecords')
 
-    epochs = 40
+    epochs = 10
     batch_size = 30
     learning_rate = 1e-3
     train_cnn_lstm_model(train_files, eval_files, epochs,
-                         batch_size, learning_rate, False, True, False)
+                         batch_size, learning_rate,
+                         load_weights=False,
+                         tune_model=False,
+                         train_tuned_model=False
+                         )
