@@ -28,25 +28,24 @@ FACE_WIDTH, FACE_HEIGHT = 100, 100
 
 
 def get_recurrent_model(learning_rate, cnn_model):
-    frame_features_input = [keras.Input(
-        (16, FACE_WIDTH, FACE_HEIGHT, 3), name="input"+str(c)) for c in range(1)]
+    hands_model = rnn_models.get_hands_rnn_model(cnn_model, learning_rate)
+    tri_model = rnn_models.get_triangle_rnn_model(cnn_model, learning_rate)
 
-    x = TimeDistributed(cnn_model)(frame_features_input)
-    x = GRU(384, return_sequences=True)(x)
-    x = Dropout(0.05)(x)
-    x = GRU(320, return_sequences=True)(x)
-    x = Dropout(0.05)(x)
-    x = GRU(192, return_sequences=True)(x)
-    x = rnn_models.Attention(return_sequences=False)(x)
+    hands_model.load_weights(
+                '/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_hands_fine_v4/').expect_partial()
 
-    output = Dense(NUMBER_OF_CLASSES, activation='softmax')(x)
+    tri_model.load_weights(
+                '/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_triangle/').expect_partial()
 
-    rnn_model = keras.Model(
-        [frame_features_input], output)
+    concat_layers = Concatenate()([
+        hands_model.layers[-2].output, tri_model.layers[-2].output])
+
+    output = Dense(NUMBER_OF_CLASSES, activation='softmax')(concat_layers)
+
+    rnn_model = keras.Model([hands_model.input, tri_model.input], output)
 
     rnn_model.compile(
-        # , momentum=0.9
-        loss='sparse_categorical_crossentropy', optimizer=tf.keras.optimizers.SGD(learning_rate=learning_rate, momentum=0.9), metrics=['accuracy']
+        loss='sparse_categorical_crossentropy', optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate), metrics=['accuracy']
     )
 
     print(rnn_model.summary())
@@ -108,9 +107,9 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
     tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
 
     callbacks_list = [
-        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_face_fine_v4/', monitor='val_accuracy',
+        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/step2_hands_triangle/', monitor='val_accuracy',
                         verbose=1, save_best_only=True, save_weights_only=True),
-        LearningRateScheduler(lr_scheduler.lr_asc_desc_decay, verbose=1),
+        # LearningRateScheduler(lr_scheduler.lr_asc_desc_decay, verbose=1),
         tensorboard_callback,
         # EarlyStopping(monitor="val_loss", patience=3)
     ]
@@ -138,7 +137,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
                   validation_steps=val_steps,
                   callbacks=callbacks_list)
     else:
-        cnn_model = get_face_cnn_model(load_weights)
+        cnn_model = get_cnn_model(load_weights)
         recurrent_model = get_recurrent_model(learning_rate, cnn_model)
 
         if load_weights:
@@ -161,12 +160,12 @@ if __name__ == '__main__':
     eval_files = tf.io.gfile.glob(
         '/home/alvaro/Desktop/video2tfrecord/results/val_v5/*.tfrecords')
 
-    epochs = 30
+    epochs = 40
     batch_size = 30
-    learning_rate = 1e-5
+    learning_rate = 1e-3
     train_cnn_lstm_model(train_files, eval_files, epochs,
                          batch_size, learning_rate,
-                         load_weights=True,
+                         load_weights=False,
                          tune_model=False,
                          train_tuned_model=False
                          )
