@@ -15,6 +15,7 @@ def disable_gpu():
     visible_devices = tf.config.get_visible_devices()
     for device in visible_devices:
         assert device.device_type != 'GPU'
+    print('GPU disabled')
 
 
 def eval_gen(dataset):
@@ -26,7 +27,7 @@ def run_model_inference(files, model_path, batch_size, evaluate=True, use_gpu=Tr
     if not use_gpu:
         disable_gpu()
 
-    n_data = utils.count_data_items(files)
+    n_data = utils.count_data_items(files)  # 3735
     dataset = load_data_tfrecord(files, batch_size, False)
 
     model = get_model(model_path)
@@ -81,8 +82,10 @@ def evaluate_model_speed(model, dataset, n_data):
 
 def get_model(model_path):
     cnn_model = cnn_lstm.get_cnn_model(False)
-    model = cnn_lstm.get_recurrent_model(0.0001, cnn_model)
+    model = cnn_lstm.get_recurrent_model(1e-3, cnn_model)
+
     model.load_weights(model_path).expect_partial()
+    model.summary()
     return model
 
 
@@ -90,7 +93,7 @@ if __name__ == '__main__':
     files = tf.io.gfile.glob(
         '/home/alvaro/Desktop/video2tfrecord/results/test_v5/*.tfrecords')
 
-    model_path = '/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_hands_fine_v4/'
+    model_path = '/home/alvaro/Desktop/multi-cue-sign-language/src/models/step3_face_triangle_hands/'
 
     run_model_inference(files, model_path, batch_size=1,
                         evaluate=False, use_gpu=False, eval_model_speed=True)
