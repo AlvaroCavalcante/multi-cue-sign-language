@@ -29,13 +29,10 @@ TRIANGLE_FIG_WIDTH, TRIANGLE_FIG_HEIGHT = 128, 128
 
 
 def get_recurrent_model(learning_rate, cnn_model):
-    triangle_fig_model = rnn_models.get_hands_rnn_model(
+    triangle_fig_model = rnn_models.get_triangle_figure_rnn_model(
         cnn_model, learning_rate)
 
-    concat_layers = Concatenate()([
-        triangle_fig_model.layers[-2].output])
-
-    output = Dense(NUMBER_OF_CLASSES, activation='softmax')(concat_layers)
+    output = Dense(NUMBER_OF_CLASSES, activation='softmax')(triangle_fig_model.layers[-2].output)
 
     rnn_model = keras.Model([triangle_fig_model.input], output)
 
