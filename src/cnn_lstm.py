@@ -28,26 +28,14 @@ FACE_WIDTH, FACE_HEIGHT = 100, 100
 
 
 def get_recurrent_model(learning_rate, cnn_model):
-    face_cnn = get_face_cnn_model(False)
-    tri_model = rnn_models.get_triangle_rnn_model(learning_rate)
-    face_model = rnn_models.get_face_rnn_model(face_cnn, learning_rate)
-    hands_model = rnn_models.get_hands_rnn_model(cnn_model, learning_rate)
-
-    tri_model.load_weights(
-                '/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_triangle/').expect_partial()
-
-    face_model.load_weights(
-                '/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_face_fine_v4/').expect_partial()
-
-    hands_model.load_weights(
-                '/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_hands_fine_v4/').expect_partial()
+    triangle_fig_model = rnn_models.get_hands_rnn_model(cnn_model, learning_rate)
 
     concat_layers = Concatenate()([
-        hands_model.layers[-2].output, tri_model.layers[-2].output, face_model.layers[-2].output])
+        triangle_fig_model.layers[-2].output])
 
     output = Dense(NUMBER_OF_CLASSES, activation='softmax')(concat_layers)
 
-    rnn_model = keras.Model([hands_model.input, tri_model.input, face_model.input], output)
+    rnn_model = keras.Model([triangle_fig_model.input], output)
 
     rnn_model.compile(
         loss='sparse_categorical_crossentropy', optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate), metrics=['accuracy']
@@ -82,7 +70,7 @@ def get_face_cnn_model(fine_tune=False):
 
 def get_cnn_model(fine_tune=False):
     hand_input = tf.keras.layers.Input(
-        shape=(HAND_WIDTH, HAND_HEIGHT, 3), name='hand_input')
+        shape=(256, 256, 3), name='triangle_fig_input')
 
     hand_seq = get_hand_sequence(hand_input, fine_tune)
 
@@ -112,7 +100,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
     tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
 
     callbacks_list = [
-        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/step3_face_triangle_hands/', monitor='val_accuracy',
+        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/triangle_figure/', monitor='val_accuracy',
                         verbose=1, save_best_only=True, save_weights_only=True),
         # LearningRateScheduler(lr_scheduler.lr_time_based_decay, verbose=1),
         tensorboard_callback,
@@ -122,7 +110,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
     if tune_model:
         print('Training model using keras tuner')
         tuner = model_tuner.get_tuner_instance()
-        # tuner.results_summary()
+        tuner.results_summary()
         tuner.search(x=train_gen(dataset),
                      steps_per_epoch=train_steps,
                      epochs=epochs,
@@ -160,10 +148,10 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
 
 if __name__ == '__main__':
     train_files = tf.io.gfile.glob(
-        '/home/alvaro/Desktop/video2tfrecord/results/train_v5/*.tfrecords')
+        '/home/alvaro/Desktop/video2tfrecord/results/train_v6/*.tfrecords')
 
     eval_files = tf.io.gfile.glob(
-        '/home/alvaro/Desktop/video2tfrecord/results/val_v5/*.tfrecords')
+        '/home/alvaro/Desktop/video2tfrecord/results/val_v6/*.tfrecords')
 
     epochs = 40
     batch_size = 30
@@ -172,5 +160,5 @@ if __name__ == '__main__':
                          batch_size, learning_rate,
                          load_weights=False,
                          tune_model=False,
-                         train_tuned_model=False
+                         train_tuned_model=True
                          )
