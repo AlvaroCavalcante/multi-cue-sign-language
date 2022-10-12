@@ -25,10 +25,12 @@ MAX_SEQ_LENGTH = 16
 NUMBER_OF_CLASSES = 226
 HAND_WIDTH, HAND_HEIGHT = 100, 200
 FACE_WIDTH, FACE_HEIGHT = 100, 100
+TRIANGLE_FIG_WIDTH, TRIANGLE_FIG_HEIGHT = 128, 128
 
 
 def get_recurrent_model(learning_rate, cnn_model):
-    triangle_fig_model = rnn_models.get_hands_rnn_model(cnn_model, learning_rate)
+    triangle_fig_model = rnn_models.get_hands_rnn_model(
+        cnn_model, learning_rate)
 
     concat_layers = Concatenate()([
         triangle_fig_model.layers[-2].output])
@@ -45,36 +47,14 @@ def get_recurrent_model(learning_rate, cnn_model):
     return rnn_model
 
 
-def get_hand_sequence(hand_input, fine_tune):
+def get_cnn_model(width: int, height: int, prefix_name: str, fine_tune=False):
+    model_input = tf.keras.layers.Input(
+        shape=(width, height, 3), name=f'{prefix_name}_input')
+
     cnn_model = cnn_models.get_efficientnet_model(
-        hand_input, prefix_name='hand', fine_tune=fine_tune)
+        model_input, prefix_name=prefix_name, fine_tune=fine_tune)
 
-    return cnn_model
-
-
-def get_face_sequence(face_input, fine_tune):
-    cnn_model = cnn_models.get_efficientnet_model(
-        face_input, prefix_name='face', fine_tune=fine_tune)
-    return cnn_model
-
-
-def get_face_cnn_model(fine_tune=False):
-    face_input = tf.keras.layers.Input(
-        shape=(FACE_WIDTH, FACE_HEIGHT, 3), name='face_input')
-
-    face_seq = get_face_sequence(face_input, fine_tune)
-
-    model = Model(inputs=[face_input], outputs=face_seq)
-    return model
-
-
-def get_cnn_model(fine_tune=False):
-    hand_input = tf.keras.layers.Input(
-        shape=(256, 256, 3), name='triangle_fig_input')
-
-    hand_seq = get_hand_sequence(hand_input, fine_tune)
-
-    model = Model(inputs=[hand_input], outputs=hand_seq)
+    model = Model(inputs=[model_input], outputs=cnn_model)
     # tf.keras.utils.plot_model(model, "model_plot.png", show_shapes=True)
     return model
 
@@ -130,7 +110,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
                   validation_steps=val_steps,
                   callbacks=callbacks_list)
     else:
-        cnn_model = get_cnn_model(load_weights)
+        cnn_model = get_cnn_model(TRIANGLE_FIG_WIDTH, TRIANGLE_FIG_HEIGHT, 'triangle_fig', load_weights)
         recurrent_model = get_recurrent_model(learning_rate, cnn_model)
 
         if load_weights:
