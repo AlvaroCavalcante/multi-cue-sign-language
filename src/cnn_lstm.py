@@ -32,7 +32,8 @@ def get_recurrent_model(learning_rate, cnn_model):
     triangle_fig_model = rnn_models.get_triangle_figure_rnn_model(
         cnn_model, learning_rate)
 
-    output = Dense(NUMBER_OF_CLASSES, activation='softmax')(triangle_fig_model.layers[-2].output)
+    output = Dense(NUMBER_OF_CLASSES, activation='softmax')(
+        triangle_fig_model.layers[-2].output)
 
     rnn_model = keras.Model([triangle_fig_model.input], output)
 
@@ -77,9 +78,9 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
     tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
 
     callbacks_list = [
-        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/triangle_figure/', monitor='val_accuracy',
+        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/triangle_figure_fine_v1/', monitor='val_accuracy',
                         verbose=1, save_best_only=True, save_weights_only=True),
-        # LearningRateScheduler(lr_scheduler.lr_time_based_decay, verbose=1),
+        LearningRateScheduler(lr_scheduler.lr_asc_desc_decay, verbose=1),
         tensorboard_callback,
         # EarlyStopping(monitor="val_loss", patience=3)
     ]
@@ -107,12 +108,14 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
                   validation_steps=val_steps,
                   callbacks=callbacks_list)
     else:
-        cnn_model = get_cnn_model(TRIANGLE_FIG_WIDTH, TRIANGLE_FIG_HEIGHT, 'triangle_fig', load_weights)
-        recurrent_model = get_recurrent_model(learning_rate, cnn_model)
+        cnn_model = get_cnn_model(
+            TRIANGLE_FIG_WIDTH, TRIANGLE_FIG_HEIGHT, 'triangle_fig', load_weights)
+        recurrent_model = rnn_models.get_triangle_figure_rnn_model(
+            cnn_model, learning_rate, 'SGD')
 
         if load_weights:
             recurrent_model.load_weights(
-                '/home/alvaro/Desktop/multi-cue-sign-language/src/models/step2_hands_face/').expect_partial()
+                '/home/alvaro/Desktop/multi-cue-sign-language/src/models/triangle_figure/').expect_partial()
 
         print('Training model')
         recurrent_model.fit(train_gen(dataset),
@@ -132,10 +135,10 @@ if __name__ == '__main__':
 
     epochs = 40
     batch_size = 30
-    learning_rate = 1e-3
+    learning_rate = 1e-5
     train_cnn_lstm_model(train_files, eval_files, epochs,
                          batch_size, learning_rate,
-                         load_weights=False,
+                         load_weights=True,
                          tune_model=False,
-                         train_tuned_model=True
+                         train_tuned_model=False
                          )
