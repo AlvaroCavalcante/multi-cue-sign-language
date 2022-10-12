@@ -81,7 +81,7 @@ def evaluate_model_speed(model, dataset, n_data):
 
 
 def get_model(model_path):
-    cnn_model = cnn_lstm.get_cnn_model(False)
+    cnn_model = cnn_lstm.get_cnn_model(128, 128, 'triangle_fig', False)
     model = cnn_lstm.get_recurrent_model(1e-3, cnn_model)
 
     model.load_weights(model_path).expect_partial()
@@ -91,9 +91,9 @@ def get_model(model_path):
 
 if __name__ == '__main__':
     files = tf.io.gfile.glob(
-        '/home/alvaro/Desktop/video2tfrecord/results/test_v5/*.tfrecords')
+        '/home/alvaro/Desktop/video2tfrecord/results/val_v6/*.tfrecords')
 
-    model_path = '/home/alvaro/Desktop/multi-cue-sign-language/src/models/step3_face_triangle_hands/'
+    model_path = '/home/alvaro/Desktop/multi-cue-sign-language/src/models/triangle_figure/'
 
     run_model_inference(files, model_path, batch_size=1,
-                        evaluate=False, use_gpu=False, eval_model_speed=True)
+                        evaluate=True, use_gpu=True, eval_model_speed=False)
