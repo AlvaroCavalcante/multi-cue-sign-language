@@ -49,7 +49,7 @@ def get_cnn_model(width: int, height: int, prefix_name: str, fine_tune=False):
     model_input = tf.keras.layers.Input(
         shape=(width, height, 3), name=f'{prefix_name}_input')
 
-    cnn_model = cnn_models.get_efficientnet_model(
+    cnn_model = cnn_models.get_mobilenet_model(
         model_input, prefix_name=prefix_name, fine_tune=fine_tune)
 
     model = Model(inputs=[model_input], outputs=cnn_model)
@@ -78,7 +78,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
     tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
 
     callbacks_list = [
-        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/triangle_figure_fine_v4/', monitor='val_accuracy',
+        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/triangle_figure_mobile_fine_v4/', monitor='val_accuracy',
                         verbose=1, save_best_only=True, save_weights_only=True),
         LearningRateScheduler(lr_scheduler.lr_asc_desc_decay, verbose=1),
         tensorboard_callback,
@@ -115,7 +115,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
 
         if load_weights:
             recurrent_model.load_weights(
-                '/home/alvaro/Desktop/multi-cue-sign-language/src/models/triangle_figure_fine_v3/').expect_partial()
+                '/home/alvaro/Desktop/multi-cue-sign-language/src/models/triangle_figure_mobile_fine_v3/').expect_partial()
 
         print('Training model')
         recurrent_model.fit(train_gen(dataset),
