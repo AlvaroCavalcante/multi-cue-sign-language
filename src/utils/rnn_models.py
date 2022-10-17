@@ -89,11 +89,10 @@ def get_triangle_figure_rnn_model(cnn_model, learning_rate, optimizer='adam'):
         (16, 128, 128, 3), name="triangle_fig_"+str(c)) for c in range(1)]
 
     x = TimeDistributed(cnn_model)(features_input)
-    x = Bidirectional(GRU(160, return_sequences=True))(x)
-    x = Dropout(0.3)(x)
-    x = Bidirectional(GRU(96, return_sequences=True))(x)
-    x = Dropout(0.3)(x)
-    x = Bidirectional(GRU(352, return_sequences=True))(x)
+    x = Bidirectional(GRU(288, return_sequences=True))(x)
+    x = Dropout(0.25)(x)
+    x = Bidirectional(GRU(416, return_sequences=True))(x)
+    x = Dropout(0.25)(x)
     x = Attention(return_sequences=False)(x)
 
     rnn_model = get_model(learning_rate, optimizer, features_input, x)

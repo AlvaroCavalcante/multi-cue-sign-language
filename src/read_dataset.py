@@ -2,7 +2,7 @@ import random
 
 import tensorflow as tf
 from data_augmentation import transform_image
-# from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
+from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 # from tensorflow.keras.applications.xception import preprocess_input
 
 
@@ -13,7 +13,7 @@ def get_image(img, width, height):
     # image = tf.reshape(image, [1, height, width, 3])
     # image = tf.cast(image, dtype='uint8')
     # image = tf.image.per_image_standardization(image)
-    # image = preprocess_input(image)
+    image = preprocess_input(image)
     return image
 
 
