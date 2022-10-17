@@ -6,14 +6,15 @@ from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 # from tensorflow.keras.applications.xception import preprocess_input
 
 
-def get_image(img, width, height):
+def get_image(img, width, height, normalize_input=False):
     image = tf.image.decode_jpeg(img, channels=3)
     image = tf.image.resize(image, [width, height])
     # image = tf.reshape(image, tf.stack([height, width, 3]))
     # image = tf.reshape(image, [1, height, width, 3])
     # image = tf.cast(image, dtype='uint8')
     # image = tf.image.per_image_standardization(image)
-    image = preprocess_input(image)
+    if normalize_input:
+        image = preprocess_input(image)
     return image
 
 
@@ -106,7 +107,7 @@ def read_tfrecord_test(example_proto):
         face_image = get_image(features[face_stream], width, height)
         hand_1_image = get_image(features[hand_1_stream], width, height)
         hand_2_image = get_image(features[hand_2_stream], width, height)
-        triangle_fig = get_image(features[triangle_fig_stream], 128, 128)
+        triangle_fig = get_image(features[triangle_fig_stream], 128, 128, True)
 
         face.append(face_image)
         hands.append(tf.concat([hand_1_image, hand_2_image], axis=1))
@@ -114,7 +115,7 @@ def read_tfrecord_test(example_proto):
 
     label = tf.cast(features['label'], tf.int32)
 
-    return (triangle_figures), label
+    return (hands, triangle_figures), label
 
 
 def read_tfrecord_train(example_proto):
@@ -172,7 +173,7 @@ def read_tfrecord_train(example_proto):
         face_image = get_image(features[face_stream], width, height)
         hand_1_image = get_image(features[hand_1_stream], width, height)
         hand_2_image = get_image(features[hand_2_stream], width, height)
-        triangle_fig = get_image(features[triangle_fig_stream], 128, 128)
+        triangle_fig = get_image(features[triangle_fig_stream], 128, 128, True)
 
         face_image = transform_image(
             face_image, width, apply_proba_dict, range_aug_dict, seed)
@@ -186,7 +187,7 @@ def read_tfrecord_train(example_proto):
         triangle_figures.append(triangle_fig)
         label = tf.cast(features['label'], tf.int32)
 
-    return (triangle_figures), label
+    return (hands, triangle_figures), label
 
 
 def filter_func(hands, face, triangle_data, centroids, label, video_name, triangle_stream_arr):
