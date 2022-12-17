@@ -16,20 +16,14 @@ HAND_WIDTH, HAND_HEIGHT = 100, 200
 FACE_WIDTH, FACE_HEIGHT = 100, 100
 
 
-def get_hand_sequence(hand_input, fine_tune):
-    cnn_model = cnn_models.get_efficientnet_model(
-        hand_input, prefix_name='hand', fine_tune=fine_tune)
-
-    return cnn_model
-
-
 def get_cnn_model(fine_tune=False):
     hand_input = tf.keras.layers.Input(
         shape=(HAND_WIDTH, HAND_HEIGHT, 3), name='hand_input')
 
-    hand_seq = get_hand_sequence(hand_input, fine_tune)
+    cnn_model = cnn_models.get_efficientnet_model(
+        hand_input, prefix_name='hand_', fine_tune=fine_tune)
 
-    model = Model(inputs=[hand_input], outputs=hand_seq)
+    model = Model(inputs=[hand_input], outputs=cnn_model)
     return model
 
 
