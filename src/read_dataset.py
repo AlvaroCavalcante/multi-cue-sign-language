@@ -115,7 +115,7 @@ def read_tfrecord_test(example_proto):
 
     label = tf.cast(features['label'], tf.int32)
 
-    return (hands, triangle_figures), label
+    return (triangle_figures), label
 
 
 def read_tfrecord_train(example_proto):
@@ -126,7 +126,7 @@ def read_tfrecord_train(example_proto):
     triangle_figures = []
 
     apply_proba_dict = get_apply_proba_dict()
-    range_aug_dict = get_range_aug_dict(80)
+    range_aug_dict = get_range_aug_dict(100)
     seed = random.randint(0, 10000)
 
     for image_count in range(16):
@@ -187,7 +187,7 @@ def read_tfrecord_train(example_proto):
         triangle_figures.append(triangle_fig)
         label = tf.cast(features['label'], tf.int32)
 
-    return (hands, triangle_figures), label
+    return (triangle_figures), label
 
 
 def filter_func(hands, face, triangle_data, centroids, label, video_name, triangle_stream_arr):
