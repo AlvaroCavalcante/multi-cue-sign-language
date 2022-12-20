@@ -1,6 +1,3 @@
-import os
-import time
-
 import keras_tuner as kt
 import tensorflow as tf
 from tensorflow.keras.layers import Bidirectional, LSTM, GRU, Dropout, Dense
@@ -165,7 +162,7 @@ def get_meta_learner(hp, concat_layers):
     with hp.conditional_scope("join_type", ['meta_learner']):
         n_layers = hp.Int(name='join_n_layers',
                           min_value=1, max_value=2, step=1)
-        hp_units = hp.Int('join_units_1', min_value=32, max_value=512, step=64)
+        hp_units = hp.Int('join_units_1', min_value=64, max_value=512, step=64)
 
         dropout_rate = hp.Float(
             name='join_dropout_1', min_value=0.05, max_value=0.35, step=0.05)
@@ -175,7 +172,7 @@ def get_meta_learner(hp, concat_layers):
 
         with hp.conditional_scope("join_n_layers", [2]):
             if n_layers >= 2:
-                hp_units_2 = hp.Int('join_units_2', min_value=32, max_value=512,
+                hp_units_2 = hp.Int('join_units_2', min_value=64, max_value=512,
                                     step=64)
                 dense = Dense(hp_units_2, activation='elu')(dense)
 
@@ -209,17 +206,18 @@ def join_archtectures(hp, cnn_rnn_layer, triangle_rnn_layer, face_rnn_layer):
 
 
 def model_builder(hp):
-    # cnn_rnn_layer = rnn_cnn_model_builder(hp)
-    # triangle_rnn_layer = triangle_model_builder(hp)
-    face_rnn_layer = face_model_builder(hp)
-    output = Dense(NUMBER_OF_CLASSES, activation='softmax')(
-        face_rnn_layer.output)
+    cnn_rnn_layer = rnn_models.get_hands_rnn_model(get_cnn_model(False), 1e-3)
+    triangle_rnn_layer = rnn_models.get_triangle_rnn_model(1e-3)
+    face_rnn_layer = rnn_models.get_face_rnn_model(get_face_cnn_model(False), 1e-3)
 
-    # output = join_archtectures(
-    #     hp, cnn_rnn_layer.output, triangle_rnn_layer.output, face_rnn_layer.output)
+    # output = Dense(NUMBER_OF_CLASSES, activation='softmax')(
+    #     face_rnn_layer.output)
+
+    output = join_archtectures(
+        hp, cnn_rnn_layer.output, triangle_rnn_layer.output, face_rnn_layer.output)
 
     rnn_model = keras.Model(
-        [face_rnn_layer.input], output)
+        [cnn_rnn_layer.input, triangle_rnn_layer.input, face_rnn_layer.input], output)
 
     rnn_model.compile(
         loss='sparse_categorical_crossentropy', optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3), metrics=['accuracy']
@@ -233,7 +231,7 @@ def get_tuner_instance():
                          objective=kt.Objective(
                              "val_accuracy", direction="max"),
                          max_epochs=15,
-                         project_name='tuner_results/step1_face')
+                         project_name='tuner_results/join_types')
 
     print(tuner.search_space_summary())
 
