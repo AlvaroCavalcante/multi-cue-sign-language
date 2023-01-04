@@ -1,6 +1,3 @@
-import os
-import time
-
 import keras_tuner as kt
 import tensorflow as tf
 from tensorflow.keras.layers import Bidirectional, LSTM, GRU, Dropout, Dense
@@ -16,51 +13,55 @@ HAND_WIDTH, HAND_HEIGHT = 100, 200
 FACE_WIDTH, FACE_HEIGHT = 100, 100
 
 
-def get_hand_sequence(hand_input, fine_tune):
-    # merged = Concatenate()([input_1, input_2])
-    cnn_model = cnn_models.get_efficientnet_model(
-        hand_input, prefix_name='hand', fine_tune=fine_tune)
-
-    return cnn_model
-
-
 def get_cnn_model(fine_tune=False):
     hand_input = tf.keras.layers.Input(
         shape=(HAND_WIDTH, HAND_HEIGHT, 3), name='hand_input')
 
-    hand_seq = get_hand_sequence(hand_input, fine_tune)
+    cnn_model = cnn_models.get_efficientnet_model(
+        hand_input, prefix_name='hand_', fine_tune=fine_tune)
 
-    model = Model(inputs=[hand_input], outputs=hand_seq)
+    model = Model(inputs=[hand_input], outputs=cnn_model)
+    return model
+
+
+def get_face_cnn_model(fine_tune=False):
+    face_input = tf.keras.layers.Input(
+        shape=(FACE_WIDTH, FACE_HEIGHT, 3), name='face_input')
+
+    cnn_model = cnn_models.get_efficientnet_model(
+        face_input, prefix_name='face_', fine_tune=fine_tune)
+
+    model = Model(inputs=[face_input], outputs=cnn_model)
     return model
 
 
 def face_model_builder(hp):
     n_layers = hp.Int(name='face_n_layers',
                       min_value=1, max_value=3, step=1)
+
     rnn_type = hp.Choice(name='face_rnn_type', values=[
                          'lstm', 'gru'], ordered=False)
-
-    dropout_rate = hp.Float(
-        name='face_dropout', min_value=0.05, max_value=0.40, step=0.05)
 
     bidirectional = hp.Boolean(name='face_bidirectional')
     attention = hp.Boolean(name='face_attention')
 
     RNN = GRU if rnn_type == 'gru' else LSTM
 
-    face_input = [keras.Input((16, 138), name='face_data')]
+    dropout_rate = hp.Float(
+        name='face_dropout', min_value=0.05, max_value=0.40, step=0.05)
+
+    face_input = [keras.Input(
+        (16, 100, 100, 3), name="face_data_"+str(c)) for c in range(1)]
+
+    cnn_model = get_face_cnn_model(False)
+    y = TimeDistributed(cnn_model)(face_input)
 
     for layer in range(1, n_layers+1):
         hp_units = hp.Int(
-            f'face_hp_units_{layer}', min_value=32, max_value=480, step=64)
+            f'face_hp_units_{layer}', min_value=64, max_value=448, step=64)
 
         return_seq = False if n_layers == layer and not attention else True
-
-        if layer == 1:
-            y = add_rnn_layer(bidirectional, hp_units,
-                              return_seq, RNN, face_input)
-        else:
-            y = add_rnn_layer(bidirectional, hp_units, return_seq, RNN, y)
+        y = add_rnn_layer(bidirectional, hp_units, return_seq, RNN, y)
 
         if layer in [1, 2]:
             y = Dropout(dropout_rate)(y)
@@ -90,7 +91,7 @@ def triangle_model_builder(hp):
 
     for layer in range(1, n_layers+1):
         hp_units = hp.Int(
-            f'triangle_hp_units_{layer}', min_value=32, max_value=320, step=64)
+            f'triangle_hp_units_{layer}', min_value=64, max_value=320, step=64)
 
         return_seq = False if n_layers == layer and not attention else True
 
@@ -161,7 +162,7 @@ def get_meta_learner(hp, concat_layers):
     with hp.conditional_scope("join_type", ['meta_learner']):
         n_layers = hp.Int(name='join_n_layers',
                           min_value=1, max_value=2, step=1)
-        hp_units = hp.Int('join_units_1', min_value=32, max_value=512, step=64)
+        hp_units = hp.Int('join_units_1', min_value=64, max_value=512, step=64)
 
         dropout_rate = hp.Float(
             name='join_dropout_1', min_value=0.05, max_value=0.35, step=0.05)
@@ -171,7 +172,7 @@ def get_meta_learner(hp, concat_layers):
 
         with hp.conditional_scope("join_n_layers", [2]):
             if n_layers >= 2:
-                hp_units_2 = hp.Int('join_units_2', min_value=32, max_value=512,
+                hp_units_2 = hp.Int('join_units_2', min_value=64, max_value=512,
                                     step=64)
                 dense = Dense(hp_units_2, activation='elu')(dense)
 
@@ -205,9 +206,12 @@ def join_archtectures(hp, cnn_rnn_layer, triangle_rnn_layer, face_rnn_layer):
 
 
 def model_builder(hp):
-    cnn_rnn_layer = rnn_cnn_model_builder(hp)
-    triangle_rnn_layer = triangle_model_builder(hp)
-    face_rnn_layer = face_model_builder(hp)
+    cnn_rnn_layer = rnn_models.get_hands_rnn_model(get_cnn_model(False), 1e-3)
+    triangle_rnn_layer = rnn_models.get_triangle_rnn_model(1e-3)
+    face_rnn_layer = rnn_models.get_face_rnn_model(get_face_cnn_model(False), 1e-3)
+
+    # output = Dense(NUMBER_OF_CLASSES, activation='softmax')(
+    #     face_rnn_layer.output)
 
     output = join_archtectures(
         hp, cnn_rnn_layer.output, triangle_rnn_layer.output, face_rnn_layer.output)
@@ -227,7 +231,7 @@ def get_tuner_instance():
                          objective=kt.Objective(
                              "val_accuracy", direction="max"),
                          max_epochs=15,
-                         project_name='tuner_results/hyperband_tuner_new_join_hands')
+                         project_name='tuner_results/join_types')
 
     print(tuner.search_space_summary())
 

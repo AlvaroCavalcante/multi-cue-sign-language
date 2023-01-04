@@ -44,7 +44,6 @@ def get_efficientnet_model(input, prefix_name, fine_tune=False):
     base_model._name = prefix_name + base_model._name
 
     for layer_n, layer in enumerate(base_model.layers):
-        # Each block needs to be all turned on or off.
         layer._name = prefix_name + str(layer.name)
         if fine_tune:
             # 75 block 3 # 119 block 4 # 162 block 5 # 221 block 6
@@ -107,24 +106,22 @@ def get_efficientnet_v2_model(input, prefix_name, fine_tune=False):
 
 
 def get_mobilenet_model(input, prefix_name, fine_tune=False):
-    input_filter = tf.keras.layers.Conv2D(
-        3, 3, padding='same', name=prefix_name+'_filter')(input)
-
     base_model = MobileNetV2(
-        pooling='avg', weights='imagenet', include_top=False)
+        pooling='avg', weights='imagenet', include_top=False, input_shape=(128, 128, 3))
+
     base_model._name = prefix_name + base_model._name
 
     for layer_n, layer in enumerate(base_model.layers):
         layer._name = prefix_name + str(layer.name)
 
         if fine_tune:
-            # 54 Layer 5 # 63 Layer 6 # 107, #134 # 142
+            # 54 Layer 5 # 107, # 143
             if isinstance(layer, layers.BatchNormalization) or layer_n < 143:
                 layer.trainable = False
         else:
             layer.trainable = False
 
     utils.get_param_count(base_model)
-    model = base_model(input_filter)
+    model = base_model(input)
 
     return model

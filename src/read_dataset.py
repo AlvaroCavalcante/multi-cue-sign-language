@@ -2,18 +2,19 @@ import random
 
 import tensorflow as tf
 from data_augmentation import transform_image
-# from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
+from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 # from tensorflow.keras.applications.xception import preprocess_input
 
 
-def get_image(img, width, height):
+def get_image(img, width, height, normalize_input=False):
     image = tf.image.decode_jpeg(img, channels=3)
     image = tf.image.resize(image, [width, height])
     # image = tf.reshape(image, tf.stack([height, width, 3]))
     # image = tf.reshape(image, [1, height, width, 3])
     # image = tf.cast(image, dtype='uint8')
     # image = tf.image.per_image_standardization(image)
-    # image = preprocess_input(image)
+    if normalize_input:
+        image = preprocess_input(image)
     return image
 
 
@@ -57,15 +58,17 @@ def get_range_aug_dict(img_width):
 
 
 def read_tfrecord_test(example_proto):
-    # face = []
+    face = []
     hands = []
     triangle_data = []
     face_keypoints = []
+    triangle_figures = []
 
     for image_count in range(16):
         face_stream = 'face/' + str(image_count)
         hand_1_stream = 'hand_1/' + str(image_count)
         hand_2_stream = 'hand_2/' + str(image_count)
+        triangle_fig_stream = 'tri_figures/' + str(image_count)
         triangle_stream = 'triangle_data/' + str(image_count)
         moviment_stream = 'moviment/' + str(image_count)
         keypoint_stream = 'keypoint/' + str(image_count)
@@ -74,6 +77,7 @@ def read_tfrecord_test(example_proto):
             face_stream: tf.io.FixedLenFeature([], tf.string),
             hand_1_stream: tf.io.FixedLenFeature([], tf.string),
             hand_2_stream: tf.io.FixedLenFeature([], tf.string),
+            triangle_fig_stream: tf.io.FixedLenFeature([], tf.string),
             triangle_stream: tf.io.VarLenFeature(tf.float32),
             moviment_stream: tf.io.VarLenFeature(tf.float32),
             keypoint_stream: tf.io.VarLenFeature(tf.float32),
@@ -100,16 +104,18 @@ def read_tfrecord_test(example_proto):
         width = tf.cast(features['width'], tf.int32)
         height = tf.cast(features['height'], tf.int32)
 
-        # face_image = get_image(features[face_stream], width, height)
+        face_image = get_image(features[face_stream], width, height)
         hand_1_image = get_image(features[hand_1_stream], width, height)
         hand_2_image = get_image(features[hand_2_stream], width, height)
+        triangle_fig = get_image(features[triangle_fig_stream], 128, 128, True)
 
-        # face.append(face_image)
+        face.append(face_image)
         hands.append(tf.concat([hand_1_image, hand_2_image], axis=1))
+        triangle_figures.append(triangle_fig)
 
     label = tf.cast(features['label'], tf.int32)
 
-    return (hands, triangle_data, face_keypoints), label
+    return (hands, triangle_data, face), label
 
 
 def read_tfrecord_train(example_proto):
@@ -117,15 +123,17 @@ def read_tfrecord_train(example_proto):
     hands = []
     triangle_data = []
     face_keypoints = []
+    triangle_figures = []
 
     apply_proba_dict = get_apply_proba_dict()
-    range_aug_dict = get_range_aug_dict(80)
+    range_aug_dict = get_range_aug_dict(100)
     seed = random.randint(0, 10000)
 
     for image_count in range(16):
         face_stream = 'face/' + str(image_count)
         hand_1_stream = 'hand_1/' + str(image_count)
         hand_2_stream = 'hand_2/' + str(image_count)
+        triangle_fig_stream = 'tri_figures/' + str(image_count)
         triangle_stream = 'triangle_data/' + str(image_count)
         moviment_stream = 'moviment/' + str(image_count)
         keypoint_stream = 'keypoint/' + str(image_count)
@@ -134,6 +142,7 @@ def read_tfrecord_train(example_proto):
             face_stream: tf.io.FixedLenFeature([], tf.string),
             hand_1_stream: tf.io.FixedLenFeature([], tf.string),
             hand_2_stream: tf.io.FixedLenFeature([], tf.string),
+            triangle_fig_stream: tf.io.FixedLenFeature([], tf.string),
             triangle_stream: tf.io.VarLenFeature(tf.float32),
             moviment_stream: tf.io.VarLenFeature(tf.float32),
             keypoint_stream: tf.io.VarLenFeature(tf.float32),
@@ -161,22 +170,24 @@ def read_tfrecord_train(example_proto):
         width = tf.cast(features['width'], tf.int32)
         height = tf.cast(features['height'], tf.int32)
 
-        # face_image = get_image(features[face_stream], width, height)
+        face_image = get_image(features[face_stream], width, height)
         hand_1_image = get_image(features[hand_1_stream], width, height)
         hand_2_image = get_image(features[hand_2_stream], width, height)
+        triangle_fig = get_image(features[triangle_fig_stream], 128, 128, True)
 
-        # face_image = transform_image(
-        #     face_image, width, apply_proba_dict, range_aug_dict, seed)
+        face_image = transform_image(
+            face_image, width, apply_proba_dict, range_aug_dict, seed)
         hand_1_image = transform_image(
             hand_1_image, width, apply_proba_dict, range_aug_dict, seed, True)
         hand_2_image = transform_image(
             hand_2_image, width, apply_proba_dict, range_aug_dict, seed, True)
 
-        # face.append(face_image)
+        face.append(face_image)
         hands.append(tf.concat([hand_1_image, hand_2_image], axis=1))
+        triangle_figures.append(triangle_fig)
         label = tf.cast(features['label'], tf.int32)
 
-    return hands, triangle_data, face_keypoints, label
+    return (hands, triangle_data, face), label
 
 
 def filter_func(hands, face, triangle_data, centroids, label, video_name, triangle_stream_arr):

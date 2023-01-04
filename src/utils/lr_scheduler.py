@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 def lr_time_based_decay(epoch, lr, nb_epoch=0):
     # decay = lr / nb_epoch
-    decay = 0.0007
+    decay = 0.0045
     return lr * 1 / (1 + decay * epoch)
 
 
@@ -20,7 +20,7 @@ def lr_step_decay(epoch, lr, nb_epoch=0):
 def lr_asc_desc_decay(epoch, lr, nb_epoch=0):
     lr_max = 1e-3
     lr_min = 1e-5
-    lr_ascending_ep = 15
+    lr_ascending_ep = 20
     lr_sus_ep = 0
     decay = 0.85
     ascending_penalty = 0.85
