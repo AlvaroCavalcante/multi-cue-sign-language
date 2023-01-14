@@ -5,7 +5,7 @@ from tensorflow import keras
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Concatenate, TimeDistributed
 from tensorflow.keras.callbacks import ModelCheckpoint, LearningRateScheduler, EarlyStopping
-from tensorflow.keras.layers import Bidirectional, LSTM, GRU, Dropout, Dense
+from tensorflow.keras.layers import Dropout, Dense
 
 from read_dataset import load_data_tfrecord
 from utils import utils
@@ -28,32 +28,38 @@ FACE_WIDTH, FACE_HEIGHT = 100, 100
 TRIANGLE_FIG_WIDTH, TRIANGLE_FIG_HEIGHT = 128, 128
 
 
-def get_recurrent_model(cnn_model, learning_rate):
-    triangle_fig_model = rnn_models.get_triangle_figure_rnn_model(
-        cnn_model, learning_rate)
-
-    face_cnn = get_hands_cnn_model(FACE_WIDTH, FACE_HEIGHT, 'face')
-
+def get_recurrent_model(learning_rate):
+    face_cnn = get_cnn_model(FACE_WIDTH, FACE_HEIGHT, 'face')
     face_model = rnn_models.get_face_rnn_model(face_cnn, learning_rate)
 
-    # triangle_fig_model.load_weights(
-    #             '/home/alvaro/Desktop/multi-cue-sign-language/src/models/new_tri_fig_mobile_fine_v1/').expect_partial()
-
-    # face_model.load_weights(
-    #             '/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_face_fine_v4/').expect_partial()
-
-    # hands_model.load_weights(
-    #     '/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_hands_fine_v4/').expect_partial()
-
-    hands_cnn = get_hands_cnn_model(HAND_WIDTH, HAND_HEIGHT, 'hands')
+    hands_cnn = get_cnn_model(HAND_WIDTH, HAND_HEIGHT, 'hands')
     hands_model = rnn_models.get_hands_rnn_model(hands_cnn, learning_rate)
 
+    triangle_model = rnn_models.get_triangle_rnn_model(learning_rate)
+
+    # triangle_fig_model = rnn_models.get_triangle_figure_rnn_model(
+    #     cnn_model, learning_rate)
+
+    # triangle_fig_model.load_weights(
+    #     '/home/alvaro/Desktop/multi-cue-sign-language/src/models/new_tri_fig_mobile_fine_v1/').expect_partial()
+
+    face_model.load_weights(
+        '/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_face_fine_v4/').expect_partial()
+
+    hands_model.load_weights(
+        '/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_hands_fine_v4/').expect_partial()
+
     concat_layers = Concatenate()([
-        face_model.layers[-2].output, hands_model.layers[-2].output, triangle_fig_model.layers[-2].output])
+        hands_model.layers[-2].output, triangle_model.layers[-2].output, face_model.layers[-2].output])
 
-    output = Dense(NUMBER_OF_CLASSES, activation='softmax')(concat_layers)
+    join_1 = Dense(448, activation='elu')(concat_layers)
+    drop_join = Dropout(0.3)(join_1)
+    join_2 = Dense(512, activation='elu')(drop_join)
 
-    rnn_model = keras.Model([face_model.input, hands_model.input, triangle_fig_model.input], output)
+    output = Dense(NUMBER_OF_CLASSES, activation='softmax')(join_2)
+
+    rnn_model = keras.Model(
+        [hands_model.input, triangle_model.input, face_model.input], output)
 
     rnn_model.compile(
         loss='sparse_categorical_crossentropy', optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate), metrics=['accuracy']
@@ -64,18 +70,6 @@ def get_recurrent_model(cnn_model, learning_rate):
 
 
 def get_cnn_model(width: int, height: int, prefix_name: str, fine_tune=False):
-    model_input = tf.keras.layers.Input(
-        shape=(width, height, 3), name=f'{prefix_name}_input')
-
-    cnn_model = cnn_models.get_mobilenet_model(
-        model_input, prefix_name=prefix_name, fine_tune=fine_tune)
-
-    model = Model(inputs=[model_input], outputs=cnn_model)
-    # tf.keras.utils.plot_model(model, "model_plot.png", show_shapes=True)
-    return model
-
-
-def get_hands_cnn_model(width: int, height: int, prefix_name: str, fine_tune=False):
     model_input = tf.keras.layers.Input(
         shape=(width, height, 3), name=f'{prefix_name}_input')
 
@@ -139,9 +133,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
                   validation_steps=val_steps,
                   callbacks=callbacks_list)
     else:
-        cnn_model = get_cnn_model(
-            TRIANGLE_FIG_WIDTH, TRIANGLE_FIG_HEIGHT, 'triangle_fig', load_weights)
-        recurrent_model = rnn_models.get_triangle_figure_rnn_model(cnn_model, learning_rate, 'SGD')
+        recurrent_model = get_recurrent_model(learning_rate)
 
         if load_weights:
             recurrent_model.load_weights(
@@ -163,12 +155,12 @@ if __name__ == '__main__':
     eval_files = tf.io.gfile.glob(
         '/home/alvaro/Desktop/video2tfrecord/results/val_v6/*.tfrecords')
 
-    epochs = 15
+    epochs = 40
     batch_size = 30
     learning_rate = 1e-3
     train_cnn_lstm_model(train_files, eval_files, epochs,
                          batch_size, learning_rate,
                          load_weights=False,
-                         tune_model=True,
+                         tune_model=False,
                          train_tuned_model=False
                          )
