@@ -8,7 +8,7 @@ from tensorflow.keras.layers import Concatenate, TimeDistributed
 from utils import cnn_models
 from utils import rnn_models
 
-NUMBER_OF_CLASSES = 226
+NUMBER_OF_CLASSES = 500
 HAND_WIDTH, HAND_HEIGHT = 100, 200
 FACE_WIDTH, FACE_HEIGHT = 100, 100
 
@@ -208,7 +208,8 @@ def join_archtectures(hp, cnn_rnn_layer, triangle_rnn_layer, face_rnn_layer):
 def model_builder(hp):
     cnn_rnn_layer = rnn_models.get_hands_rnn_model(get_cnn_model(False), 1e-3)
     triangle_rnn_layer = rnn_models.get_triangle_rnn_model(1e-3)
-    face_rnn_layer = rnn_models.get_face_rnn_model(get_face_cnn_model(False), 1e-3)
+    face_rnn_layer = rnn_models.get_face_rnn_model(
+        get_face_cnn_model(False), 1e-3)
 
     # output = Dense(NUMBER_OF_CLASSES, activation='softmax')(
     #     face_rnn_layer.output)
