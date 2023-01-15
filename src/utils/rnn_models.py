@@ -8,7 +8,7 @@ from tensorflow.keras.layers import Concatenate, TimeDistributed
 
 FACE_WIDTH, FACE_HEIGHT = 100, 100
 MAX_SEQ_LENGTH = 16
-NUMBER_OF_CLASSES = 500
+NUMBER_OF_CLASSES = 226
 HAND_WIDTH, HAND_HEIGHT = 100, 200
 
 
