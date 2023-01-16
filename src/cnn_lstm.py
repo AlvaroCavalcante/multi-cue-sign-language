@@ -47,7 +47,7 @@ def get_recurrent_model(learning_rate):
     #     '/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_face_fine_v4/').expect_partial()
 
     hands_model.load_weights(
-        '/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_hands_csl_transfer/').expect_partial()
+        '/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_hands_csl_fine/').expect_partial()
 
     # concat_layers = Concatenate()([
     #     hands_model.layers[-2].output, triangle_model.layers[-2].output, face_model.layers[-2].output])
@@ -98,7 +98,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
     tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
 
     callbacks_list = [
-        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_hands_csl_fine/', monitor='val_accuracy',
+        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_hands_csl_fine_v2/', monitor='val_accuracy',
                         verbose=1, save_best_only=True, save_weights_only=True),
         LearningRateScheduler(lr_scheduler.lr_asc_desc_decay, verbose=1),
         tensorboard_callback,
