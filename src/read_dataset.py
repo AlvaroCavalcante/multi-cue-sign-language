@@ -61,7 +61,6 @@ def read_tfrecord_test(example_proto):
     face = []
     hands = []
     triangle_data = []
-    face_keypoints = []
     # triangle_figures = []
 
     for image_count in range(16):
@@ -71,7 +70,6 @@ def read_tfrecord_test(example_proto):
         triangle_fig_stream = 'tri_figures/' + str(image_count)
         triangle_stream = 'triangle_data/' + str(image_count)
         moviment_stream = 'moviment/' + str(image_count)
-        keypoint_stream = 'keypoint/' + str(image_count)
 
         feature_dict = {
             # face_stream: tf.io.FixedLenFeature([], tf.string),
@@ -80,7 +78,6 @@ def read_tfrecord_test(example_proto):
             # triangle_fig_stream: tf.io.FixedLenFeature([], tf.string),
             triangle_stream: tf.io.VarLenFeature(tf.float32),
             moviment_stream: tf.io.VarLenFeature(tf.float32),
-            keypoint_stream: tf.io.VarLenFeature(tf.float32),
             'video_name': tf.io.FixedLenFeature([], tf.string),
             'height': tf.io.FixedLenFeature([], tf.int64),
             'width': tf.io.FixedLenFeature([], tf.int64),
@@ -90,8 +87,6 @@ def read_tfrecord_test(example_proto):
         features = tf.io.parse_single_example(
             example_proto, features=feature_dict)
 
-        face_keypoints.append(tf.squeeze(tf.reshape(
-            features[keypoint_stream].values, (1, 136))))
 
         triangle = tf.squeeze(tf.reshape(
             features[triangle_stream].values, (1, 11)))
@@ -115,14 +110,13 @@ def read_tfrecord_test(example_proto):
 
     label = tf.cast(features['label'], tf.int32)
 
-    return (hands, triangle_data), label
+    return (hands), label
 
 
 def read_tfrecord_train(example_proto):
     face = []
     hands = []
     triangle_data = []
-    face_keypoints = []
     triangle_figures = []
 
     apply_proba_dict = get_apply_proba_dict()
@@ -136,7 +130,6 @@ def read_tfrecord_train(example_proto):
         triangle_fig_stream = 'tri_figures/' + str(image_count)
         triangle_stream = 'triangle_data/' + str(image_count)
         moviment_stream = 'moviment/' + str(image_count)
-        keypoint_stream = 'keypoint/' + str(image_count)
 
         feature_dict = {
             # face_stream: tf.io.FixedLenFeature([], tf.string),
@@ -145,7 +138,6 @@ def read_tfrecord_train(example_proto):
             # triangle_fig_stream: tf.io.FixedLenFeature([], tf.string),
             triangle_stream: tf.io.VarLenFeature(tf.float32),
             moviment_stream: tf.io.VarLenFeature(tf.float32),
-            keypoint_stream: tf.io.VarLenFeature(tf.float32),
             # 'video_name': tf.io.FixedLenFeature([], tf.string),
             'height': tf.io.FixedLenFeature([], tf.int64),
             'width': tf.io.FixedLenFeature([], tf.int64),
@@ -155,9 +147,6 @@ def read_tfrecord_train(example_proto):
 
         features = tf.io.parse_single_example(
             example_proto, features=feature_dict)
-
-        face_keypoints.append(tf.squeeze(tf.reshape(
-            features[keypoint_stream].values, (1, 136))))
 
         triangle = tf.squeeze(tf.reshape(
             features[triangle_stream].values, (1, 11)))
@@ -187,7 +176,7 @@ def read_tfrecord_train(example_proto):
         # triangle_figures.append(triangle_fig)
         label = tf.cast(features['label'], tf.int32)
 
-    return (hands, triangle_data), label
+    return (hands), label
 
 
 def filter_func(hands, face, triangle_data, centroids, label, video_name, triangle_stream_arr):
@@ -206,7 +195,7 @@ def load_dataset(tf_record_path, train):
     return parsed_dataset
 
 
-def prepare_data(ds, batch_size, train, shuffle_buffer_size=1000):
+def prepare_data(ds, batch_size, train, shuffle_buffer_size=2000):
     # ds.cache() # I can remove this to don't use cache or use cocodata.tfcache
 
     if train:
