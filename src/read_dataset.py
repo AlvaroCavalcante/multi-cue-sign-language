@@ -110,7 +110,7 @@ def read_tfrecord_test(example_proto):
 
     label = tf.cast(features['label'], tf.int32)
 
-    return (face, hands), label
+    return (face, hands, triangle_data), label
 
 
 def read_tfrecord_train(example_proto):
@@ -176,7 +176,7 @@ def read_tfrecord_train(example_proto):
         # triangle_figures.append(triangle_fig)
         label = tf.cast(features['label'], tf.int32)
 
-    return (face, hands), label
+    return (face, hands, triangle_data), label
 
 
 def filter_func(hands, face, triangle_data, centroids, label, video_name, triangle_stream_arr):
