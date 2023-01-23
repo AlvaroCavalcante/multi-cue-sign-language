@@ -61,7 +61,7 @@ def read_tfrecord_test(example_proto):
     face = []
     hands = []
     triangle_data = []
-    # triangle_figures = []
+    triangle_figures = []
 
     for image_count in range(16):
         face_stream = 'face/' + str(image_count)
@@ -75,7 +75,7 @@ def read_tfrecord_test(example_proto):
             face_stream: tf.io.FixedLenFeature([], tf.string),
             hand_1_stream: tf.io.FixedLenFeature([], tf.string),
             hand_2_stream: tf.io.FixedLenFeature([], tf.string),
-            # triangle_fig_stream: tf.io.FixedLenFeature([], tf.string),
+            triangle_fig_stream: tf.io.FixedLenFeature([], tf.string),
             triangle_stream: tf.io.VarLenFeature(tf.float32),
             moviment_stream: tf.io.VarLenFeature(tf.float32),
             'video_name': tf.io.FixedLenFeature([], tf.string),
@@ -99,18 +99,18 @@ def read_tfrecord_test(example_proto):
         width = tf.cast(features['width'], tf.int32)
         height = tf.cast(features['height'], tf.int32)
 
-        face_image = get_image(features[face_stream], width, height)
-        hand_1_image = get_image(features[hand_1_stream], width, height)
-        hand_2_image = get_image(features[hand_2_stream], width, height)
-        # triangle_fig = get_image(features[triangle_fig_stream], 128, 128, True)
+        # face_image = get_image(features[face_stream], width, height)
+        # hand_1_image = get_image(features[hand_1_stream], width, height)
+        # hand_2_image = get_image(features[hand_2_stream], width, height)
+        triangle_fig = get_image(features[triangle_fig_stream], 128, 128, True)
 
-        face.append(face_image)
-        hands.append(tf.concat([hand_1_image, hand_2_image], axis=1))
-        # triangle_figures.append(triangle_fig)
+        # face.append(face_image)
+        # hands.append(tf.concat([hand_1_image, hand_2_image], axis=1))
+        triangle_figures.append(triangle_fig)
 
     label = tf.cast(features['label'], tf.int32)
 
-    return (face, hands, triangle_data), label
+    return (triangle_figures), label
 
 
 def read_tfrecord_train(example_proto):
@@ -135,7 +135,7 @@ def read_tfrecord_train(example_proto):
             face_stream: tf.io.FixedLenFeature([], tf.string),
             hand_1_stream: tf.io.FixedLenFeature([], tf.string),
             hand_2_stream: tf.io.FixedLenFeature([], tf.string),
-            # triangle_fig_stream: tf.io.FixedLenFeature([], tf.string),
+            triangle_fig_stream: tf.io.FixedLenFeature([], tf.string),
             triangle_stream: tf.io.VarLenFeature(tf.float32),
             moviment_stream: tf.io.VarLenFeature(tf.float32),
             # 'video_name': tf.io.FixedLenFeature([], tf.string),
@@ -159,24 +159,24 @@ def read_tfrecord_train(example_proto):
         width = tf.cast(features['width'], tf.int32)
         height = tf.cast(features['height'], tf.int32)
 
-        face_image = get_image(features[face_stream], width, height)
-        hand_1_image = get_image(features[hand_1_stream], width, height)
-        hand_2_image = get_image(features[hand_2_stream], width, height)
-        # triangle_fig = get_image(features[triangle_fig_stream], 128, 128, True)
+        # face_image = get_image(features[face_stream], width, height)
+        # hand_1_image = get_image(features[hand_1_stream], width, height)
+        # hand_2_image = get_image(features[hand_2_stream], width, height)
+        triangle_fig = get_image(features[triangle_fig_stream], 128, 128, True)
 
-        face_image = transform_image(
-            face_image, width, apply_proba_dict, range_aug_dict, seed)
-        hand_1_image = transform_image(
-            hand_1_image, width, apply_proba_dict, range_aug_dict, seed, True)
-        hand_2_image = transform_image(
-            hand_2_image, width, apply_proba_dict, range_aug_dict, seed, True)
+        # face_image = transform_image(
+        #     face_image, width, apply_proba_dict, range_aug_dict, seed)
+        # hand_1_image = transform_image(
+        #     hand_1_image, width, apply_proba_dict, range_aug_dict, seed, True)
+        # hand_2_image = transform_image(
+        #     hand_2_image, width, apply_proba_dict, range_aug_dict, seed, True)
 
-        face.append(face_image)
-        hands.append(tf.concat([hand_1_image, hand_2_image], axis=1))
-        # triangle_figures.append(triangle_fig)
+        # face.append(face_image)
+        # hands.append(tf.concat([hand_1_image, hand_2_image], axis=1))
+        triangle_figures.append(triangle_fig)
         label = tf.cast(features['label'], tf.int32)
 
-    return (face, hands, triangle_data), label
+    return (triangle_figures), label
 
 
 def filter_func(hands, face, triangle_data, centroids, label, video_name, triangle_stream_arr):
