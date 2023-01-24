@@ -33,31 +33,31 @@ def get_recurrent_model(learning_rate):
     # face_model = rnn_models.get_face_rnn_model(
     #     face_cnn, learning_rate)
 
-    # hands_cnn = get_cnn_model(HAND_WIDTH, HAND_HEIGHT, 'hands')
-    # hands_model = rnn_models.get_hands_rnn_model(hands_cnn, learning_rate)
+    hands_cnn = get_cnn_model(HAND_WIDTH, HAND_HEIGHT, 'hands')
+    hands_model = rnn_models.get_hands_rnn_model(hands_cnn, learning_rate)
 
     # triangle_model = rnn_models.get_triangle_rnn_model(learning_rate)
 
-    triangle_cnn = get_cnn_model(TRIANGLE_FIG_WIDTH, TRIANGLE_FIG_HEIGHT, 'triangle')
+    triangle_cnn = get_cnn_model(TRIANGLE_FIG_WIDTH, TRIANGLE_FIG_HEIGHT, 'triangle', model_name='mobilenet')
     triangle_fig_model = rnn_models.get_triangle_figure_rnn_model(
         triangle_cnn, learning_rate)
 
     triangle_fig_model.load_weights(
-        '/home/alvaro/Desktop/multi-cue-sign-language/src/models/new_tri_fig_mobile_fine_v1/').expect_partial()
+        '/home/alvaro/Desktop/multi-cue-sign-language/src/models/triangle_figure_csl/').expect_partial()
 
-    # hands_model.load_weights(
-    #     '/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_hands_csl_fine_v2/').expect_partial()
+    hands_model.load_weights(
+        '/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_hands_csl_fine_v2/').expect_partial()
 
     # face_model.load_weights(
     #     '/home/alvaro/Desktop/multi-cue-sign-language/src/models/step1_face_csl_fine_v2/').expect_partial()
 
-    # concat_layers = Concatenate()([
-    #     face_model.layers[-2].output, hands_model.layers[-2].output, triangle_model.layers[-2].output])
+    concat_layers = Concatenate()([
+        triangle_fig_model.layers[-2].output, hands_model.layers[-2].output])
 
-    output = Dense(NUMBER_OF_CLASSES, activation='softmax')(triangle_fig_model.layers[-2].output)
+    output = Dense(NUMBER_OF_CLASSES, activation='softmax')(concat_layers)
 
     rnn_model = keras.Model(
-        [triangle_fig_model.input], output)
+        [triangle_fig_model.input, hands_model.input], output)
 
     rnn_model.compile(
         loss='sparse_categorical_crossentropy', optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate), metrics=['accuracy']
@@ -67,12 +67,16 @@ def get_recurrent_model(learning_rate):
     return rnn_model
 
 
-def get_cnn_model(width: int, height: int, prefix_name: str, fine_tune=False):
+def get_cnn_model(width: int, height: int, prefix_name: str, fine_tune=False, model_name='EfficientNet'):
     model_input = tf.keras.layers.Input(
         shape=(width, height, 3), name=f'{prefix_name}_input')
 
-    cnn_model = cnn_models.get_mobilenet_model(
-        model_input, prefix_name=prefix_name, fine_tune=fine_tune)
+    if model_name == 'EfficientNet':
+        cnn_model = cnn_models.get_efficientnet_model(
+            model_input, prefix_name=prefix_name, fine_tune=fine_tune)
+    else:
+        cnn_model = cnn_models.get_mobilenet_model(
+            model_input, prefix_name=prefix_name, fine_tune=fine_tune)
 
     model = Model(inputs=[model_input], outputs=cnn_model)
     # tf.keras.utils.plot_model(model, "model_plot.png", show_shapes=True)
@@ -100,7 +104,7 @@ def train_cnn_lstm_model(train_files, eval_files, epochs, batch_size, learning_r
     tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
 
     callbacks_list = [
-        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/triangle_figure_csl/', monitor='val_accuracy',
+        ModelCheckpoint('/home/alvaro/Desktop/multi-cue-sign-language/src/models/triangle_figure_hands_csl/', monitor='val_accuracy',
                         verbose=1, save_best_only=True, save_weights_only=True),
         # LearningRateScheduler(lr_scheduler.lr_asc_desc_decay, verbose=1),
         tensorboard_callback,
