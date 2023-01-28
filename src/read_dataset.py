@@ -100,17 +100,17 @@ def read_tfrecord_test(example_proto):
         height = tf.cast(features['height'], tf.int32)
 
         face_image = get_image(features[face_stream], width, height)
-        # hand_1_image = get_image(features[hand_1_stream], width, height)
-        # hand_2_image = get_image(features[hand_2_stream], width, height)
+        hand_1_image = get_image(features[hand_1_stream], width, height)
+        hand_2_image = get_image(features[hand_2_stream], width, height)
         triangle_fig = get_image(features[triangle_fig_stream], 128, 128, True)
 
         face.append(face_image)
-        # hands.append(tf.concat([hand_1_image, hand_2_image], axis=1))
+        hands.append(tf.concat([hand_1_image, hand_2_image], axis=1))
         triangle_figures.append(triangle_fig)
 
     label = tf.cast(features['label'], tf.int32)
 
-    return (triangle_figures, face), label
+    return (triangle_figures, face, hands), label
 
 
 def read_tfrecord_train(example_proto):
@@ -160,23 +160,23 @@ def read_tfrecord_train(example_proto):
         height = tf.cast(features['height'], tf.int32)
 
         face_image = get_image(features[face_stream], width, height)
-        # hand_1_image = get_image(features[hand_1_stream], width, height)
-        # hand_2_image = get_image(features[hand_2_stream], width, height)
+        hand_1_image = get_image(features[hand_1_stream], width, height)
+        hand_2_image = get_image(features[hand_2_stream], width, height)
         triangle_fig = get_image(features[triangle_fig_stream], 128, 128, True)
 
         face_image = transform_image(
             face_image, width, apply_proba_dict, range_aug_dict, seed)
-        # hand_1_image = transform_image(
-        #     hand_1_image, width, apply_proba_dict, range_aug_dict, seed, True)
-        # hand_2_image = transform_image(
-        #     hand_2_image, width, apply_proba_dict, range_aug_dict, seed, True)
+        hand_1_image = transform_image(
+            hand_1_image, width, apply_proba_dict, range_aug_dict, seed, True)
+        hand_2_image = transform_image(
+            hand_2_image, width, apply_proba_dict, range_aug_dict, seed, True)
 
         face.append(face_image)
-        # hands.append(tf.concat([hand_1_image, hand_2_image], axis=1))
+        hands.append(tf.concat([hand_1_image, hand_2_image], axis=1))
         triangle_figures.append(triangle_fig)
         label = tf.cast(features['label'], tf.int32)
 
-    return (triangle_figures, face), label
+    return (triangle_figures, face, hands), label
 
 
 def filter_func(hands, face, triangle_data, centroids, label, video_name, triangle_stream_arr):
@@ -195,7 +195,7 @@ def load_dataset(tf_record_path, train):
     return parsed_dataset
 
 
-def prepare_data(ds, batch_size, train, shuffle_buffer_size=2000):
+def prepare_data(ds, batch_size, train, shuffle_buffer_size=1000):
     # ds.cache() # I can remove this to don't use cache or use cocodata.tfcache
 
     if train:
